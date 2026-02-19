@@ -13,8 +13,7 @@
   "dependencies": {
     "@app/db": "workspace:*",
     "@app/shared": "workspace:*",
-    "bullmq": "^5.8.0",
-    "ioredis": "^5.4.1"
+    "bullmq": "^5.8.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.24",

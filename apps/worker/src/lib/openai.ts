@@ -64,7 +64,7 @@ async function uploadFileToOpenAI({
   purpose: "user_data";
 }) {
   const form = new FormData();
-  const blob = new Blob([buffer], { type: contentType });
+  const blob = new Blob([new Uint8Array(buffer)], { type: contentType });
   form.append("file", blob, filename);
   form.append("purpose", purpose);
 

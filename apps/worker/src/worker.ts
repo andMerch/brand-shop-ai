@@ -1,12 +1,17 @@
 import { Worker } from "bullmq";
-import IORedis from "ioredis";
 import { config } from "./lib/config.js";
 import { processAiVisionJob } from "./jobs/aiVision.js";
 import { processAnalyticsJob } from "./jobs/analytics.js";
 
-const connection = new IORedis(config.redisUrl, {
-  maxRetriesPerRequest: null
-});
+const redisUrl = new URL(config.redisUrl);
+const connection = {
+  host: redisUrl.hostname,
+  port: Number(redisUrl.port || "6379"),
+  username: redisUrl.username || undefined,
+  password: redisUrl.password || undefined,
+  maxRetriesPerRequest: null,
+  tls: redisUrl.protocol === "rediss:" ? {} : undefined
+};
 
 const aiVisionWorker = new Worker(
   "ai-vision",
