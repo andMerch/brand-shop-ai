@@ -54,6 +54,12 @@ enum OrderStatus {
   COMPLETE
 }
 
+enum CatalogSource {
+  SSACTIVEWEAR
+  PRINTFUL
+  MANUAL
+}
+
 model Tenant {
   id               String             @id @default(cuid())
   name             String
@@ -112,6 +118,7 @@ model Store {
   updatedAt     DateTime    @updatedAt
   orders        Order[]
   catalogs      Catalog[]
+  domains       StorefrontDomain[]
 }
 
 model Catalog {
@@ -135,10 +142,23 @@ model Product {
   supplierId  String?
   supplier    Supplier? @relation(fields: [supplierId], references: [id])
   price       Float?
+  source      CatalogSource?
+  externalId  String?
+  metadata    Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   catalogItems CatalogItem[]
   orderItems   OrderItem[]
+}
+
+model StorefrontDomain {
+  id         String   @id @default(cuid())
+  storeId    String
+  store      Store    @relation(fields: [storeId], references: [id])
+  domain     String   @unique
+  type       String
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }
 
 model CatalogItem {

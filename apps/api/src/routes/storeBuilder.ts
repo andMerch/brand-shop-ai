@@ -3,6 +3,8 @@ import { prisma } from "../lib/db.js";
 import { StoreBuilderTriggerSchema } from "@app/shared";
 import { resolveTenantId } from "../lib/tenant.js";
 import { config } from "../lib/config.js";
+import { slugify } from "../lib/slug.js";
+import { buildDefaultPricing } from "../services/pricing.js";
 
 export async function storeBuilderRoutes(app: FastifyInstance) {
   app.post("/api/store-builder/trigger", async (request, reply) => {
@@ -22,12 +24,21 @@ export async function storeBuilderRoutes(app: FastifyInstance) {
       return reply.status(400).send({ ok: false, error: parse.error.flatten() });
     }
 
-    const { tenantId, locationId, storeName, clientName, brandVertical, metadata } = parse.data;
+    const { tenantId, locationId, storeName, clientName, brandVertical, metadata, pricingModel } = parse.data;
     let resolvedTenantId: string;
     try {
       resolvedTenantId = await resolveTenantId({ tenantId, locationId });
     } catch (error) {
       return reply.status(400).send({ ok: false, error: "location_not_linked" });
+    }
+
+    const baseSlug = slugify(storeName || "store");
+    let slug = baseSlug || `store-${Date.now()}`;
+    let domain = `${slug}.${config.brandBaseDomain}`;
+    let suffix = 1;
+    while (await prisma.storefrontDomain.findFirst({ where: { domain } })) {
+      slug = `${baseSlug}-${suffix++}`;
+      domain = `${slug}.${config.brandBaseDomain}`;
     }
 
     const store = await prisma.store.create({
@@ -40,7 +51,16 @@ export async function storeBuilderRoutes(app: FastifyInstance) {
         config: {
           clientName,
           brandVertical,
-          metadata
+          metadata,
+          storefront: {
+            slug,
+            primaryDomain: domain
+          },
+          pricing: buildDefaultPricing(pricingModel ?? "DISTRIBUTOR"),
+          billing: {
+            mode: "DISTRIBUTOR_COLLECTS",
+            chargeTiming: "IMMEDIATE"
+          }
         },
         ghlLocation: {
           connectOrCreate: {
@@ -48,6 +68,15 @@ export async function storeBuilderRoutes(app: FastifyInstance) {
             create: { locationId }
           }
         }
+      }
+    });
+
+    await prisma.storefrontDomain.create({
+      data: {
+        storeId: store.id,
+        domain,
+        type: "SUBDOMAIN",
+        isPrimary: true
       }
     });
 

@@ -6,7 +6,8 @@ export const StoreBuilderTriggerSchema = z.object({
   storeName: z.string().min(1),
   clientName: z.string().optional(),
   brandVertical: z.string().optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.any()).optional(),
+  pricingModel: z.enum(["DISTRIBUTOR", "DIRECT"]).optional()
 });
 
 export const AiVisionIngestSchema = z.object({
@@ -45,6 +46,55 @@ export const ReputationRequestSchema = z.object({
   channel: z.enum(["sms", "email"]).default("sms")
 });
 
+export const PricingModelSchema = z.enum(["DISTRIBUTOR", "DIRECT"]);
+
+export const PricingConfigSchema = z.object({
+  model: PricingModelSchema,
+  decoration: z.object({
+    baseFee: z.number().min(0),
+    markupFixed: z.number().min(0),
+    applyPercentMarkup: z.boolean().default(false)
+  }),
+  distributorMarkupPercent: z.number().min(0).default(40),
+  directMarkupTiers: z
+    .array(
+      z.object({
+        min: z.number().min(0),
+        max: z.number().optional(),
+        percent: z.number().min(0)
+      })
+    )
+    .default([
+      { min: 5.01, max: 9.99, percent: 85 },
+      { min: 10, max: 29.99, percent: 60 },
+      { min: 30, percent: 50 }
+    ]),
+  checkoutFees: z.object({
+    shipping: z.number().min(0).default(7),
+    taxRate: z.number().min(0).default(0.07),
+    ccRate: z.number().min(0).default(0.03),
+    platformFee: z.number().min(0).default(4.94),
+    fulfillmentFeeDecorator: z.number().min(0).optional(),
+    fulfillmentFeePlatform: z.number().min(0).optional(),
+    transactionFeeRate: z.number().min(0).optional(),
+    orderFee: z.number().min(0).optional()
+  })
+});
+
+export const StorefrontDomainSchema = z.object({
+  storeId: z.string().min(1),
+  domain: z.string().min(3),
+  type: z.enum(["SUBDOMAIN", "CUSTOM"]).default("CUSTOM"),
+  isPrimary: z.boolean().optional()
+});
+
+export const CatalogSyncSchema = z.object({
+  tenantId: z.string().min(1),
+  storeId: z.string().optional(),
+  source: z.enum(["ssactivewear", "printful"]),
+  limit: z.number().int().min(1).max(500).optional()
+});
+
 export const DashboardSummarySchema = z.object({
   revenue: z.number(),
   orders: z.number(),
@@ -60,4 +110,7 @@ export type AiVisionIngestInput = z.infer<typeof AiVisionIngestSchema>;
 export type RoutingRuleInput = z.infer<typeof RoutingRuleSchema>;
 export type RouteOrderInput = z.infer<typeof RouteOrderSchema>;
 export type ReputationRequestInput = z.infer<typeof ReputationRequestSchema>;
+export type PricingConfigInput = z.infer<typeof PricingConfigSchema>;
+export type StorefrontDomainInput = z.infer<typeof StorefrontDomainSchema>;
+export type CatalogSyncInput = z.infer<typeof CatalogSyncSchema>;
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;

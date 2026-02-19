@@ -8,6 +8,7 @@
   "scripts": {
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
     "build": "tsc -p tsconfig.json",
     "lint": "echo 'no lint'",
     "test": "echo 'no tests'"

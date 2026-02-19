@@ -10,6 +10,9 @@ import { routingRoutes } from "./routes/routing.js";
 import { reputationRoutes } from "./routes/reputation.js";
 import { integrationsRoutes } from "./routes/integrations.js";
 import { ghlRoutes } from "./routes/ghl.js";
+import { catalogRoutes } from "./routes/catalogs.js";
+import { storefrontRoutes } from "./routes/storefront.js";
+import { storesRoutes } from "./routes/stores.js";
 
 export function buildServer() {
   const app = fastify({ logger: true, bodyLimit: 25 * 1024 * 1024 });
@@ -34,6 +37,9 @@ export function buildServer() {
   app.register(reputationRoutes);
   app.register(integrationsRoutes);
   app.register(ghlRoutes);
+  app.register(catalogRoutes);
+  app.register(storefrontRoutes);
+  app.register(storesRoutes);
 
   return app;
 }
