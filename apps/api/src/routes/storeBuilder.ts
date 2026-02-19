@@ -32,7 +32,9 @@ export async function storeBuilderRoutes(app: FastifyInstance) {
 
     const store = await prisma.store.create({
       data: {
-        tenantId: resolvedTenantId,
+        tenant: {
+          connect: { id: resolvedTenantId }
+        },
         name: storeName,
         status: "DRAFT",
         config: {

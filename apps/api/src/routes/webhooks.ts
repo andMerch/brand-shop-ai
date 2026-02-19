@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { prisma } from "../lib/db.js";
+import { prisma, Prisma } from "../lib/db.js";
 import { aiVisionQueue } from "../lib/queue.js";
 import { config } from "../lib/config.js";
 
@@ -39,15 +39,16 @@ export async function webhooksRoutes(app: FastifyInstance) {
         tenantId,
         locationId,
         eventType,
-        payload: payload ?? {}
+        payload: (payload ?? {}) as Prisma.InputJsonValue
       }
     });
 
     const attachments = (payload?.attachments as Array<{ url?: string }> | undefined) ?? [];
+    const conversation = payload?.conversation as { id?: string } | undefined;
     const conversationId =
       (payload?.conversationId as string | undefined) ||
       (payload?.conversation_id as string | undefined) ||
-      (payload?.conversation?.id as string | undefined);
+      conversation?.id;
     if (attachments.length > 0 && tenantId) {
       for (const attachment of attachments) {
         if (!attachment.url) continue;
