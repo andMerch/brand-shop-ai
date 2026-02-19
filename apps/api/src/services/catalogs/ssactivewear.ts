@@ -120,7 +120,7 @@ export async function syncSsActivewearCatalog(input: {
             name,
             price: baseCost,
             source: "SSACTIVEWEAR",
-            metadata: item as unknown as Record<string, unknown>
+            metadata: item as unknown as Record<string, unknown> as any
           }
         })
       : await prisma.product.create({
@@ -131,7 +131,7 @@ export async function syncSsActivewearCatalog(input: {
             price: baseCost,
             source: "SSACTIVEWEAR",
             externalId: externalId ?? undefined,
-            metadata: item as unknown as Record<string, unknown>
+            metadata: item as unknown as Record<string, unknown> as any
           }
         });
 

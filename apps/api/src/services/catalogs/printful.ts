@@ -110,7 +110,7 @@ export async function syncPrintfulCatalog(input: {
             name: item.name,
             price: Number.isNaN(baseCost) ? 0 : baseCost,
             source: "PRINTFUL",
-            metadata: detailsData.result as unknown as Record<string, unknown>
+            metadata: detailsData.result as unknown as Record<string, unknown> as any
           }
         })
       : await prisma.product.create({
@@ -121,7 +121,7 @@ export async function syncPrintfulCatalog(input: {
             price: Number.isNaN(baseCost) ? 0 : baseCost,
             source: "PRINTFUL",
             externalId: String(item.id),
-            metadata: detailsData.result as unknown as Record<string, unknown>
+            metadata: detailsData.result as unknown as Record<string, unknown> as any
           }
         });
 
