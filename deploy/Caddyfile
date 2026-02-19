@@ -1,0 +1,11 @@
+{
+  email admin@brand-shop.ai
+}
+
+brand-shop.ai {
+  reverse_proxy web:3000
+}
+
+api.brand-shop.ai {
+  reverse_proxy api:3001
+}

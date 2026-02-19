@@ -1,0 +1,298 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StoreStatus {
+  DRAFT
+  LIVE
+  PAUSED
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum AiVisionSource {
+  UPLOAD
+  GHL_ATTACHMENT
+}
+
+enum AiVisionStatus {
+  QUEUED
+  PROCESSING
+  NEEDS_REVIEW
+  COMPLETE
+  FAILED
+}
+
+enum FindingSeverity {
+  INFO
+  WARNING
+  ERROR
+}
+
+enum RoutingStatus {
+  APPLIED
+  OVERRIDDEN
+}
+
+enum WebhookStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+}
+
+enum OrderStatus {
+  NEW
+  ROUTED
+  COMPLETE
+}
+
+model Tenant {
+  id               String             @id @default(cuid())
+  name             String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  ghlLocations     GhlLocation[]
+  users            User[]
+  stores           Store[]
+  routingRules     RoutingRule[]
+  decorators       Decorator[]
+  suppliers        Supplier[]
+  orders           Order[]
+  dashboardMetrics DashboardMetric[]
+  aiVisionJobs     AiVisionJob[]
+  conversations    Conversation[]
+  reputationReviews ReputationReview[]
+  webhookEvents    WebhookEvent[]
+}
+
+model GhlLocation {
+  id         String   @id @default(cuid())
+  locationId String   @unique
+  apiKey     String?
+  settings   Json?
+  tenantId   String?
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  email     String   @unique
+  name      String?
+  role      UserRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Store {
+  id            String      @id @default(cuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+  name          String
+  status        StoreStatus @default(DRAFT)
+  ghlLocationId String?
+  ghlLocation   GhlLocation? @relation(fields: [ghlLocationId], references: [id])
+  theme         Json?
+  config        Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  orders        Order[]
+  catalogs      Catalog[]
+}
+
+model Catalog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  storeId   String?
+  store     Store?   @relation(fields: [storeId], references: [id])
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items     CatalogItem[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  productType String?
+  supplierId  String?
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  price       Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  catalogItems CatalogItem[]
+  orderItems   OrderItem[]
+}
+
+model CatalogItem {
+  id        String   @id @default(cuid())
+  catalogId String
+  productId String
+  isActive  Boolean  @default(true)
+  catalog   Catalog  @relation(fields: [catalogId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id         String      @id @default(cuid())
+  tenantId   String
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  storeId    String?
+  store      Store?      @relation(fields: [storeId], references: [id])
+  externalId String?
+  status     OrderStatus @default(NEW)
+  total      Float       @default(0)
+  currency   String      @default("USD")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  items      OrderItem[]
+  routingDecision RoutingDecision?
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id])
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  productName String
+  quantity    Int
+  unitPrice   Float
+}
+
+model RoutingRule {
+  id               String    @id @default(cuid())
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  priority         Int       @default(0)
+  productType      String?
+  supplierId       String?
+  decorationMethod String?
+  decoratorId      String?
+  decorator        Decorator? @relation(fields: [decoratorId], references: [id])
+  supplier         Supplier?  @relation(fields: [supplierId], references: [id])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  routingDecisions RoutingDecision[]
+}
+
+model Decorator {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  name       String
+  metadata   Json?
+  rules      RoutingRule[]
+  decisions  RoutingDecision[]
+}
+
+model Supplier {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  name       String
+  metadata   Json?
+  rules      RoutingRule[]
+  products   Product[]
+}
+
+model RoutingDecision {
+  id         String        @id @default(cuid())
+  orderId    String        @unique
+  order      Order         @relation(fields: [orderId], references: [id])
+  decoratorId String?
+  decorator  Decorator?    @relation(fields: [decoratorId], references: [id])
+  ruleId     String?
+  rule       RoutingRule?  @relation(fields: [ruleId], references: [id])
+  status     RoutingStatus @default(APPLIED)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model AiVisionJob {
+  id        String         @id @default(cuid())
+  tenantId  String
+  tenant    Tenant         @relation(fields: [tenantId], references: [id])
+  source    AiVisionSource
+  sourceRef String?
+  inputUrl  String
+  status    AiVisionStatus @default(QUEUED)
+  extracted Json?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  findings  AiVisionFinding[]
+}
+
+model AiVisionFinding {
+  id        String          @id @default(cuid())
+  jobId     String
+  job       AiVisionJob     @relation(fields: [jobId], references: [id])
+  severity  FindingSeverity @default(INFO)
+  field     String?
+  message   String
+  createdAt DateTime        @default(now())
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  locationId String
+  ghlId     String
+  channel   String
+  lastMessage String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([locationId, ghlId])
+}
+
+model ReputationReview {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  locationId  String
+  rating      Int
+  reviewerName String?
+  status      String?
+  responseText String?
+  createdAt   DateTime @default(now())
+  respondedAt DateTime?
+}
+
+model DashboardMetric {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  key        String
+  value      Float
+  capturedAt DateTime @default(now())
+
+  @@index([tenantId, key, capturedAt])
+}
+
+model WebhookEvent {
+  id         String        @id @default(cuid())
+  tenantId   String?
+  tenant     Tenant?       @relation(fields: [tenantId], references: [id])
+  locationId String?
+  eventType  String?
+  payload    Json
+  status     WebhookStatus @default(RECEIVED)
+  receivedAt DateTime      @default(now())
+}

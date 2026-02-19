@@ -1,0 +1,27 @@
+FROM node:20-slim AS base
+WORKDIR /app
+RUN corepack enable
+
+FROM base AS deps
+COPY package.json pnpm-workspace.yaml tsconfig.base.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY packages/shared/package.json packages/shared/package.json
+COPY packages/db/package.json packages/db/package.json
+RUN pnpm install
+
+FROM deps AS builder
+COPY apps/web apps/web
+COPY packages/shared packages/shared
+COPY packages/db packages/db
+RUN pnpm --filter @app/web build
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/apps/web ./apps/web
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=builder /app/tsconfig.base.json ./tsconfig.base.json
+EXPOSE 3000
+CMD ["pnpm", "--filter", "@app/web", "start"]
