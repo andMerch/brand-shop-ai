@@ -1,7 +1,6 @@
 import fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
-import rawBody from "@fastify/raw-body";
 import { config } from "./lib/config.js";
 import { webhooksRoutes } from "./routes/webhooks.js";
 import { storeBuilderRoutes } from "./routes/storeBuilder.js";
@@ -17,13 +16,6 @@ export function buildServer() {
 
   app.register(cors, {
     origin: true
-  });
-
-  app.register(rawBody, {
-    field: "rawBody",
-    global: true,
-    encoding: "utf8",
-    runFirst: true
   });
 
   app.register(multipart, {

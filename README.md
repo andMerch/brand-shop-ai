@@ -59,7 +59,6 @@ The Caddy proxy expects:
 ## GHL Webhook Setup
 - Webhook URL: `https://api.brand-shop.ai/api/webhooks/ghl`
 - Add header `X-GHL-Webhook-Secret` (matches `GHL_WEBHOOK_SECRET`).
-- GHL also supports `X-Wh-Signature` verification with the public key in `apps/api/src/lib/ghlWebhookVerify.ts`.
 
 ## Store Builder Trigger (GHL Workflow)
 Use a Custom Webhook action pointing to:

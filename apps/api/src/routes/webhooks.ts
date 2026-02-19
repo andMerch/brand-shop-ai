@@ -2,7 +2,6 @@ import { FastifyInstance } from "fastify";
 import { prisma } from "../lib/db.js";
 import { aiVisionQueue } from "../lib/queue.js";
 import { config } from "../lib/config.js";
-import { verifyGhlSignature } from "../lib/ghlWebhookVerify.js";
 
 export async function webhooksRoutes(app: FastifyInstance) {
   app.post("/api/webhooks/ghl", async (request, reply) => {
@@ -13,19 +12,8 @@ export async function webhooksRoutes(app: FastifyInstance) {
     const querySecret = (request.query as { secret?: string; webhook_secret?: string } | undefined)?.secret ??
       (request.query as { secret?: string; webhook_secret?: string } | undefined)?.webhook_secret;
     const providedSecret = headerSecret ?? querySecret;
-    const signature = request.headers["x-wh-signature"] as string | undefined;
-
     if (config.ghlWebhookSecret && providedSecret !== config.ghlWebhookSecret) {
-      if (!signature) {
-        return reply.status(401).send({ ok: false, error: "invalid_webhook_secret" });
-      }
-    }
-
-    if (signature && typeof request.rawBody === "string") {
-      const isValid = verifyGhlSignature(request.rawBody, signature);
-      if (!isValid) {
-        return reply.status(401).send({ ok: false, error: "invalid_webhook_signature" });
-      }
+      return reply.status(401).send({ ok: false, error: "invalid_webhook_secret" });
     }
 
     const payload = request.body as Record<string, unknown> | undefined;
