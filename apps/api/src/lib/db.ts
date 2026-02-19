@@ -1,3 +1,3 @@
-import { prisma } from "@app/db";
+import { prisma, Prisma } from "@app/db";
 
-export { prisma };
+export { prisma, Prisma };

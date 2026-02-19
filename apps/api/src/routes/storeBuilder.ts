@@ -53,8 +53,12 @@ export async function storeBuilderRoutes(app: FastifyInstance) {
 
     const catalog = await prisma.catalog.create({
       data: {
-        tenantId,
-        storeId: store.id,
+        tenant: {
+          connect: { id: resolvedTenantId }
+        },
+        store: {
+          connect: { id: store.id }
+        },
         name: `${storeName} Starter Catalog`
       }
     });
@@ -69,7 +73,9 @@ export async function storeBuilderRoutes(app: FastifyInstance) {
     for (const suggestion of suggestions) {
       const product = await prisma.product.create({
         data: {
-          tenantId,
+          tenant: {
+            connect: { id: resolvedTenantId }
+          },
           name: suggestion.name,
           productType: suggestion.productType
         }
