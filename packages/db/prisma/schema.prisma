@@ -5,22 +5,26 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+
 }
 
 enum StoreStatus {
   DRAFT
   LIVE
   PAUSED
+
 }
 
 enum UserRole {
   ADMIN
   MEMBER
+
 }
 
 enum AiVisionSource {
   UPLOAD
   GHL_ATTACHMENT
+
 }
 
 enum AiVisionStatus {
@@ -29,35 +33,41 @@ enum AiVisionStatus {
   NEEDS_REVIEW
   COMPLETE
   FAILED
+
 }
 
 enum FindingSeverity {
   INFO
   WARNING
   ERROR
+
 }
 
 enum RoutingStatus {
   APPLIED
   OVERRIDDEN
+
 }
 
 enum WebhookStatus {
   RECEIVED
   PROCESSED
   FAILED
+
 }
 
 enum OrderStatus {
   NEW
   ROUTED
   COMPLETE
+
 }
 
 enum CatalogSource {
   SSACTIVEWEAR
   PRINTFUL
   MANUAL
+
 }
 
 model Tenant {
@@ -79,6 +89,7 @@ model Tenant {
   conversations    Conversation[]
   reputationReviews ReputationReview[]
   webhookEvents    WebhookEvent[]
+
 }
 
 model GhlLocation {
@@ -91,6 +102,7 @@ model GhlLocation {
   stores     Store[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
 }
 
 model User {
@@ -102,6 +114,7 @@ model User {
   role      UserRole @default(ADMIN)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
 }
 
 model Store {
@@ -119,6 +132,7 @@ model Store {
   orders        Order[]
   catalogs      Catalog[]
   domains       StorefrontDomain[]
+
 }
 
 model Catalog {
@@ -131,6 +145,7 @@ model Catalog {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   items     CatalogItem[]
+
 }
 
 model Product {
@@ -149,6 +164,7 @@ model Product {
   updatedAt   DateTime @updatedAt
   catalogItems CatalogItem[]
   orderItems   OrderItem[]
+
 }
 
 model StorefrontDomain {
@@ -159,6 +175,7 @@ model StorefrontDomain {
   type       String
   isPrimary  Boolean  @default(false)
   createdAt  DateTime @default(now())
+
 }
 
 model CatalogItem {
@@ -168,6 +185,7 @@ model CatalogItem {
   isActive  Boolean  @default(true)
   catalog   Catalog  @relation(fields: [catalogId], references: [id])
   product   Product  @relation(fields: [productId], references: [id])
+
 }
 
 model Order {
@@ -184,6 +202,7 @@ model Order {
   updatedAt  DateTime    @updatedAt
   items      OrderItem[]
   routingDecision RoutingDecision?
+
 }
 
 model OrderItem {
@@ -195,6 +214,7 @@ model OrderItem {
   productName String
   quantity    Int
   unitPrice   Float
+
 }
 
 model RoutingRule {
@@ -211,6 +231,7 @@ model RoutingRule {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   routingDecisions RoutingDecision[]
+
 }
 
 model Decorator {
@@ -221,6 +242,7 @@ model Decorator {
   metadata   Json?
   rules      RoutingRule[]
   decisions  RoutingDecision[]
+
 }
 
 model Supplier {
@@ -231,6 +253,7 @@ model Supplier {
   metadata   Json?
   rules      RoutingRule[]
   products   Product[]
+
 }
 
 model RoutingDecision {
@@ -244,6 +267,7 @@ model RoutingDecision {
   status     RoutingStatus @default(APPLIED)
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
+
 }
 
 model AiVisionJob {
@@ -258,6 +282,7 @@ model AiVisionJob {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
   findings  AiVisionFinding[]
+
 }
 
 model AiVisionFinding {
@@ -268,6 +293,7 @@ model AiVisionFinding {
   field     String?
   message   String
   createdAt DateTime        @default(now())
+
 }
 
 model Conversation {
@@ -283,6 +309,7 @@ model Conversation {
   updatedAt DateTime @updatedAt
 
   @@unique([locationId, ghlId])
+
 }
 
 model ReputationReview {
@@ -296,6 +323,7 @@ model ReputationReview {
   responseText String?
   createdAt   DateTime @default(now())
   respondedAt DateTime?
+
 }
 
 model DashboardMetric {
@@ -307,6 +335,7 @@ model DashboardMetric {
   capturedAt DateTime @default(now())
 
   @@index([tenantId, key, capturedAt])
+
 }
 
 model WebhookEvent {
@@ -318,4 +347,5 @@ model WebhookEvent {
   payload    Json
   status     WebhookStatus @default(RECEIVED)
   receivedAt DateTime      @default(now())
+
 }
