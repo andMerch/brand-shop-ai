@@ -17,6 +17,7 @@ import { storesRoutes } from "./routes/stores.js";
 import { pricingRulesRoutes } from "./routes/pricingRules.js";
 import { pricingConfigRoutes } from "./routes/pricingConfig.js";
 import { supplierAccountsRoutes } from "./routes/supplierAccounts.js";
+import { mockupRoutes } from "./routes/mockups.js";
 
 export function buildServer() {
   const app = fastify({ logger: true, bodyLimit: 25 * 1024 * 1024 });
@@ -73,6 +74,7 @@ export function buildServer() {
   app.register(pricingRulesRoutes);
   app.register(pricingConfigRoutes);
   app.register(supplierAccountsRoutes);
+  app.register(mockupRoutes);
 
   return app;
 }

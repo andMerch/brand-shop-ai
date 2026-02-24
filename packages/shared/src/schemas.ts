@@ -122,6 +122,23 @@ export const PricingConfigUpsertSchema = z.object({
   config: PricingConfigSchema
 });
 
+export const MockupPlacementSchema = z.enum([
+  "LEFT_CHEST",
+  "RIGHT_CHEST",
+  "FULL_FRONT",
+  "FULL_BACK",
+  "BACK"
+]);
+
+export const MockupGenerateSchema = z.object({
+  storeId: z.string().min(1),
+  productId: z.string().min(1),
+  variantId: z.string().optional(),
+  placement: MockupPlacementSchema.default("FULL_FRONT"),
+  logoUrl: z.string().url().optional(),
+  overwrite: z.boolean().optional()
+});
+
 export const SupplierAccountSchema = z.object({
   tenantId: z.string().min(1),
   supplier: z.enum(["SSACTIVEWEAR", "SANMAR"]),
@@ -159,6 +176,7 @@ export type StorefrontCheckoutInput = z.infer<typeof StorefrontCheckoutSchema>;
 export type PricingRuleInput = z.infer<typeof PricingRuleSchema>;
 export type PricingRuleBatchInput = z.infer<typeof PricingRuleBatchSchema>;
 export type PricingConfigUpsertInput = z.infer<typeof PricingConfigUpsertSchema>;
+export type MockupGenerateInput = z.infer<typeof MockupGenerateSchema>;
 export type SupplierAccountInput = z.infer<typeof SupplierAccountSchema>;
 export type CatalogSyncInput = z.infer<typeof CatalogSyncSchema>;
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;

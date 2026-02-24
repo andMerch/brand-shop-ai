@@ -263,6 +263,12 @@ a {
   gap: 0.8rem;
 }
 
+.divider {
+  height: 1px;
+  background: rgba(12, 18, 28, 0.08);
+  width: 100%;
+}
+
 .tag {
   background: #f1f5f9;
   border-radius: 999px;

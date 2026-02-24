@@ -96,6 +96,14 @@ enum PricingConfigScope {
   STORE
 }
 
+enum MockupPlacement {
+  LEFT_CHEST
+  RIGHT_CHEST
+  FULL_FRONT
+  FULL_BACK
+  BACK
+}
+
 model Tenant {
   id               String             @id @default(cuid())
   name             String
@@ -213,9 +221,28 @@ model ProductVariant {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   orderItems OrderItem[]
+  mockups    ProductMockup[]
 
   @@index([productId])
   @@unique([productId, externalId])
+}
+
+model ProductMockup {
+  id        String          @id @default(cuid())
+  storeId   String
+  store     Store           @relation(fields: [storeId], references: [id])
+  productId String
+  product   Product         @relation(fields: [productId], references: [id])
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  placement MockupPlacement
+  imageUrl  String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([storeId, productId, variantId, placement])
+  @@index([storeId, productId])
+  @@index([storeId, variantId])
 }
 
 model StorefrontDomain {

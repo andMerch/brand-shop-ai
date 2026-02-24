@@ -193,7 +193,8 @@ export async function storefrontRoutes(app: FastifyInstance) {
 
   app.get("/api/storefront/:storeId/catalog", async (request, reply) => {
     const { storeId } = request.params as { storeId: string };
-    const locationCountRaw = (request.query as { locations?: string } | undefined)?.locations;
+    const query = request.query as { locations?: string; placement?: string } | undefined;
+    const locationCountRaw = query?.locations;
     const locationCount = Number(locationCountRaw ?? 1) || 1;
 
     const store = await prisma.store.findFirst({
@@ -214,6 +215,11 @@ export async function storefrontRoutes(app: FastifyInstance) {
     }
 
     const config = (store.config as Record<string, unknown> | null) ?? {};
+    const storefrontConfig = (config.storefront as Record<string, unknown> | null) ?? {};
+    const placement =
+      (query?.placement as string | undefined) ??
+      (storefrontConfig.mockupPlacement as string | undefined) ??
+      "FULL_FRONT";
     const pricing = await resolvePricingConfig({
       storeId: store.id,
       tenantId: store.tenantId,
@@ -234,6 +240,19 @@ export async function storefrontRoutes(app: FastifyInstance) {
       where: { tenantId: store.tenantId }
     })) as unknown as PricingRule[];
 
+    const mockups = await prisma.productMockup.findMany({
+      where: { storeId: store.id, placement: placement as any }
+    });
+    const mockupByVariant = new Map<string, string>();
+    const mockupByProduct = new Map<string, string>();
+    for (const mockup of mockups) {
+      if (mockup.variantId) {
+        mockupByVariant.set(mockup.variantId, mockup.imageUrl);
+      } else {
+        mockupByProduct.set(mockup.productId, mockup.imageUrl);
+      }
+    }
+
     const priced = catalogItems
       .filter((item) => item.product)
       .map((item) => {
@@ -253,7 +272,11 @@ export async function storefrontRoutes(app: FastifyInstance) {
             sku: variant.sku,
             size: variant.size,
             color: variant.color,
-            imageUrl: variant.imageUrl ?? product.imageUrl,
+            imageUrl:
+              mockupByVariant.get(variant.id) ??
+              mockupByProduct.get(product.id) ??
+              variant.imageUrl ??
+              product.imageUrl,
             baseCost: pricingResult.baseCost,
             brandShopPrice: pricingResult.brandShopPrice,
             price: pricingResult.price
@@ -277,7 +300,7 @@ export async function storefrontRoutes(app: FastifyInstance) {
           brand: product.brand,
           description: product.description,
           category: product.category,
-          imageUrl: product.imageUrl,
+          imageUrl: mockupByProduct.get(product.id) ?? product.imageUrl,
           productType: product.productType,
           supplierId: product.supplierId,
           baseCost: defaultVariant?.baseCost ?? fallbackPricing.baseCost,
