@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "../lib/db.js";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@app/db";
 import { SupplierAccountSchema } from "@app/shared";
 
 function normalizeCredentials(input: Record<string, unknown>): Prisma.InputJsonValue {
