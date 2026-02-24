@@ -1,8 +1,9 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "../lib/db.js";
+import { Prisma } from "@prisma/client";
 import { SupplierAccountSchema } from "@app/shared";
 
-function normalizeCredentials(input: Record<string, unknown>) {
+function normalizeCredentials(input: Record<string, unknown>): Prisma.InputJsonValue {
   const trimmed: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (typeof value === "string") {
@@ -11,7 +12,7 @@ function normalizeCredentials(input: Record<string, unknown>) {
       trimmed[key] = value;
     }
   }
-  return trimmed;
+  return trimmed as Prisma.InputJsonValue;
 }
 
 export async function supplierAccountsRoutes(app: FastifyInstance) {
