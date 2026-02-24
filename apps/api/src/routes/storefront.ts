@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "../lib/db.js";
 import { StorefrontCheckoutSchema, StorefrontDomainSchema } from "@app/shared";
-import { buildDefaultPricing, calculateItemPrice } from "../services/pricing.js";
+import { buildDefaultPricing, applyPricingRules, PricingRule } from "../services/pricing.js";
 
 function calculateOrderTotals(pricing: any, subtotal: number) {
   const fees = pricing.checkoutFees ?? {};
@@ -41,6 +41,79 @@ function calculateOrderTotals(pricing: any, subtotal: number) {
     tax,
     ccFee,
     total
+  };
+}
+
+function computeVariantPricing(params: {
+  product: {
+    id: string;
+    category?: string | null;
+    price?: number | null;
+    imageUrl?: string | null;
+  };
+  variant?: {
+    id: string;
+    sku?: string | null;
+    size?: string | null;
+    color?: string | null;
+    imageUrl?: string | null;
+    baseCost?: number | null;
+  } | null;
+  pricing: any;
+  brandShopRules: PricingRule[];
+  distributorRules: PricingRule[];
+  locationCount: number;
+}) {
+  const { product, variant, pricing, brandShopRules, distributorRules, locationCount } = params;
+  const baseCost = variant?.baseCost ?? product.price ?? 0;
+  const decorationBase = pricing.decoration.baseFee * locationCount;
+  const decorationMarkup = pricing.decoration.markupFixed * locationCount;
+  const decorationTotal = decorationBase + decorationMarkup;
+
+  const context = {
+    productId: product.id,
+    category: product.category ?? undefined,
+    variantId: variant?.id ?? undefined,
+    size: variant?.size ?? undefined,
+    color: variant?.color ?? undefined
+  };
+
+  const brandShopAdjust = applyPricingRules({
+    baseCost,
+    decorationBase,
+    decorationTotal,
+    config: pricing as any,
+    rules: brandShopRules,
+    context,
+    defaultPercent: 0
+  });
+
+  const brandShopPrice =
+    baseCost +
+    decorationTotal +
+    brandShopAdjust.percentAmount +
+    brandShopAdjust.fixedTotal;
+
+  const distributorAdjust = applyPricingRules({
+    baseCost: brandShopPrice,
+    decorationBase: 0,
+    decorationTotal: 0,
+    config: pricing as any,
+    rules: distributorRules,
+    context,
+    defaultPercent: pricing.distributorMarkupPercent ?? 0,
+    percentBaseOverride: brandShopPrice
+  });
+
+  const distributorPrice =
+    brandShopPrice +
+    (brandShopPrice * distributorAdjust.percentTotal) / 100 +
+    distributorAdjust.fixedTotal;
+
+  return {
+    baseCost,
+    brandShopPrice,
+    price: Math.max(brandShopPrice, distributorPrice)
   };
 }
 
@@ -87,7 +160,7 @@ export async function storefrontRoutes(app: FastifyInstance) {
         catalogs: {
           include: {
             items: {
-              include: { product: true }
+              include: { product: { include: { variants: true } } }
             }
           }
         }
@@ -108,23 +181,62 @@ export async function storefrontRoutes(app: FastifyInstance) {
       }))
     );
 
+    const brandShopRules = (await prisma.pricingRule.findMany({
+      where: { tenantId: null }
+    })) as unknown as PricingRule[];
+    const distributorRules = (await prisma.pricingRule.findMany({
+      where: { tenantId: store.tenantId }
+    })) as unknown as PricingRule[];
+
     const priced = catalogItems
       .filter((item) => item.product)
       .map((item) => {
         const product = item.product!;
-        const baseCost = product.price ?? 0;
-        const priceBreakdown = calculateItemPrice(pricing as any, {
-          baseCost,
-          decorationLocations: locationCount
+        const variantList = (product.variants ?? []).map((variant) => {
+          const pricingResult = computeVariantPricing({
+            product,
+            variant,
+            pricing,
+            brandShopRules,
+            distributorRules,
+            locationCount
+          });
+
+          return {
+            id: variant.id,
+            sku: variant.sku,
+            size: variant.size,
+            color: variant.color,
+            imageUrl: variant.imageUrl ?? product.imageUrl,
+            baseCost: pricingResult.baseCost,
+            brandShopPrice: pricingResult.brandShopPrice,
+            price: pricingResult.price
+          };
         });
+
+        const fallbackPricing = computeVariantPricing({
+          product,
+          variant: null,
+          pricing,
+          brandShopRules,
+          distributorRules,
+          locationCount
+        });
+
+        const defaultVariant = variantList[0];
+
         return {
           id: product.id,
           name: product.name,
+          brand: product.brand,
+          description: product.description,
+          category: product.category,
+          imageUrl: product.imageUrl,
           productType: product.productType,
           supplierId: product.supplierId,
-          baseCost,
-          price: priceBreakdown.price,
-          priceBreakdown
+          baseCost: defaultVariant?.baseCost ?? fallbackPricing.baseCost,
+          price: defaultVariant?.price ?? fallbackPricing.price,
+          variants: variantList
         };
       });
 
@@ -149,7 +261,8 @@ export async function storefrontRoutes(app: FastifyInstance) {
 
     const productIds = items.map((item) => item.productId);
     const products = await prisma.product.findMany({
-      where: { id: { in: productIds }, tenantId: store.tenantId }
+      where: { id: { in: productIds }, tenantId: store.tenantId },
+      include: { variants: true }
     });
     const productMap = new Map(products.map((product) => [product.id, product]));
 
@@ -161,18 +274,38 @@ export async function storefrontRoutes(app: FastifyInstance) {
       }
     }
 
+    const brandShopRules = (await prisma.pricingRule.findMany({
+      where: { tenantId: null }
+    })) as unknown as PricingRule[];
+    const distributorRules = (await prisma.pricingRule.findMany({
+      where: { tenantId: store.tenantId }
+    })) as unknown as PricingRule[];
+
     const lineItems = items.map((item) => {
       const product = productMap.get(item.productId)!;
-      const baseCost = product.price ?? 0;
-      const priceBreakdown = calculateItemPrice(pricing as any, {
-        baseCost,
-        decorationLocations: locationCount
+      const variant = item.variantId
+        ? product.variants.find((entry) => entry.id === item.variantId)
+        : product.variants[0];
+      const pricingResult = computeVariantPricing({
+        product,
+        variant: variant ?? null,
+        pricing,
+        brandShopRules,
+        distributorRules,
+        locationCount
       });
       return {
         productId: product.id,
+        variantId: variant?.id ?? null,
         productName: product.name,
         quantity: item.quantity,
-        unitPrice: priceBreakdown.price
+        unitPrice: pricingResult.price,
+        metadata: {
+          size: variant?.size,
+          color: variant?.color,
+          sku: variant?.sku,
+          imageUrl: variant?.imageUrl ?? product.imageUrl
+        }
       };
     });
 

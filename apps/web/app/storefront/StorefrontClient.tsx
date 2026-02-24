@@ -2,12 +2,27 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+type CatalogVariant = {
+  id: string;
+  sku?: string | null;
+  size?: string | null;
+  color?: string | null;
+  imageUrl?: string | null;
+  baseCost: number;
+  price: number;
+};
+
 type CatalogItem = {
   id: string;
   name: string;
+  brand?: string | null;
+  description?: string | null;
+  category?: string | null;
+  imageUrl?: string | null;
   productType?: string | null;
   baseCost: number;
   price: number;
+  variants?: CatalogVariant[];
 };
 
 type StorefrontClientProps = {
@@ -30,7 +45,11 @@ export default function StorefrontClient({
   items
 }: StorefrontClientProps) {
   const [catalog, setCatalog] = useState<CatalogItem[]>(items);
-  const [cart, setCart] = useState<Record<string, number>>({});
+  const [cart, setCart] = useState<Record<string, { variantId?: string; quantity: number }>>({});
+  const [selection, setSelection] = useState<Record<string, string>>({});
+  const [optionSelection, setOptionSelection] = useState<
+    Record<string, { color?: string; size?: string }>
+  >({});
   const [decorationLocations, setDecorationLocations] = useState(1);
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +61,7 @@ export default function StorefrontClient({
     try {
       const saved = window.localStorage.getItem(cartKey);
       if (saved) {
-        setCart(JSON.parse(saved) as Record<string, number>);
+        setCart(JSON.parse(saved) as Record<string, { variantId?: string; quantity: number }>);
       }
     } catch {
       // ignore malformed local storage
@@ -64,6 +83,27 @@ export default function StorefrontClient({
       const data = (await response.json()) as { items: CatalogItem[] };
       if (active && data.items) {
         setCatalog(data.items);
+        setSelection((prev) => {
+          const next = { ...prev };
+          for (const item of data.items) {
+            if (!next[item.id] && item.variants?.length) {
+              next[item.id] = item.variants[0].id;
+            }
+          }
+          return next;
+        });
+        setOptionSelection((prev) => {
+          const next = { ...prev };
+          for (const item of data.items) {
+            if (!next[item.id] && item.variants?.length) {
+              next[item.id] = {
+                color: item.variants[0].color ?? undefined,
+                size: item.variants[0].size ?? undefined
+              };
+            }
+          }
+          return next;
+        });
       }
     };
     fetchCatalog().catch(() => undefined);
@@ -72,18 +112,48 @@ export default function StorefrontClient({
     };
   }, [apiBase, storeId, decorationLocations]);
 
+  useEffect(() => {
+    setSelection((prev) => {
+      const next = { ...prev };
+      for (const item of catalog) {
+        const selected = optionSelection[item.id];
+        const selectedColor = selected?.color;
+        const selectedSize = selected?.size;
+        const variant =
+          item.variants?.find(
+            (entry) =>
+              (!selectedColor || entry.color === selectedColor) &&
+              (!selectedSize || entry.size === selectedSize)
+          ) ??
+          item.variants?.[0];
+        if (variant) {
+          next[item.id] = variant.id;
+        }
+      }
+      return next;
+    });
+  }, [catalog, optionSelection]);
+
   const cartLines = useMemo(() => {
     return Object.entries(cart)
-      .map(([productId, quantity]) => {
+      .map(([productId, entry]) => {
         const product = catalog.find((item) => item.id === productId);
         if (!product) return null;
-        return { product, quantity };
+        const variantId = entry.variantId ?? selection[productId];
+        const variant =
+          product.variants?.find((entry) => entry.id === variantId) ??
+          product.variants?.[0] ??
+          null;
+        return { product, quantity: entry.quantity, variant };
       })
-      .filter(Boolean) as Array<{ product: CatalogItem; quantity: number }>;
-  }, [cart, catalog]);
+      .filter(Boolean) as Array<{ product: CatalogItem; quantity: number; variant: CatalogVariant | null }>;
+  }, [cart, catalog, selection]);
 
   const subtotal = cartLines.reduce(
-    (sum, line) => sum + line.product.price * line.quantity,
+    (sum, line) => {
+      const price = line.variant?.price ?? line.product.price;
+      return sum + price * line.quantity;
+    },
     0
   );
 
@@ -93,11 +163,16 @@ export default function StorefrontClient({
   const updateCart = (productId: string, delta: number) => {
     setCart((prev) => {
       const next = { ...prev };
-      const nextQty = (next[productId] ?? 0) + delta;
+      const current = next[productId];
+      const currentQty = current?.quantity ?? 0;
+      const nextQty = currentQty + delta;
       if (nextQty <= 0) {
         delete next[productId];
       } else {
-        next[productId] = nextQty;
+        next[productId] = {
+          variantId: selection[productId],
+          quantity: nextQty
+        };
       }
       return next;
     });
@@ -117,6 +192,7 @@ export default function StorefrontClient({
           storeId,
           items: cartLines.map((line) => ({
             productId: line.product.id,
+            variantId: line.variant?.id,
             quantity: line.quantity
           })),
           decorationLocations
@@ -192,21 +268,106 @@ export default function StorefrontClient({
 
       <section className="section">
         <div className="card-grid">
-          {catalog.map((item) => (
-            <div className="card" key={item.id}>
-              <strong>{item.name}</strong>
-              <p className="muted">{item.productType ?? "Catalog Item"}</p>
-              <div className="price">{formatPrice(item.price)}</div>
-              <div className="row">
-                <button className="cta" onClick={() => updateCart(item.id, 1)}>
-                  Add to Cart
-                </button>
-                <button className="ghost" onClick={() => updateCart(item.id, -1)}>
-                  Remove
-                </button>
+          {catalog.map((item) => {
+            const selectedOptions = optionSelection[item.id] ?? {};
+            const colors = Array.from(
+              new Set(
+                (item.variants ?? [])
+                  .map((entry) => entry.color)
+                  .filter(Boolean) as string[]
+              )
+            );
+            const selectedColor = selectedOptions.color ?? colors[0];
+            const sizes = Array.from(
+              new Set(
+                (item.variants ?? [])
+                  .filter((entry) =>
+                    selectedColor ? entry.color === selectedColor : true
+                  )
+                  .map((entry) => entry.size)
+                  .filter(Boolean) as string[]
+              )
+            );
+            const selectedSize = selectedOptions.size ?? sizes[0];
+            const variant =
+              item.variants?.find(
+                (entry) =>
+                  (!selectedColor || entry.color === selectedColor) &&
+                  (!selectedSize || entry.size === selectedSize)
+              ) ?? item.variants?.[0];
+
+            const displayPrice = variant?.price ?? item.price;
+            const imageUrl = variant?.imageUrl ?? item.imageUrl;
+
+            return (
+              <div className="card" key={item.id}>
+                {imageUrl ? (
+                  <div className="image-frame">
+                    <img src={imageUrl} alt={item.name} />
+                  </div>
+                ) : null}
+                <strong>{item.name}</strong>
+                <p className="muted">
+                  {item.brand ? `${item.brand} · ` : ""}
+                  {item.category ?? item.productType ?? "Catalog Item"}
+                </p>
+                {item.description ? <p className="muted">{item.description}</p> : null}
+                <div className="price">{formatPrice(displayPrice)}</div>
+                {colors.length > 0 ? (
+                  <label className="muted">
+                    Color
+                    <select
+                      className="select"
+                      value={selectedColor}
+                      onChange={(event) => {
+                        const nextColor = event.target.value;
+                        setOptionSelection((prev) => ({
+                          ...prev,
+                          [item.id]: { ...prev[item.id], color: nextColor }
+                        }));
+                      }}
+                    >
+                      {colors.map((color) => (
+                        <option key={color} value={color}>
+                          {color}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                {sizes.length > 0 ? (
+                  <label className="muted">
+                    Size
+                    <select
+                      className="select"
+                      value={selectedSize}
+                      onChange={(event) => {
+                        const nextSize = event.target.value;
+                        setOptionSelection((prev) => ({
+                          ...prev,
+                          [item.id]: { ...prev[item.id], size: nextSize }
+                        }));
+                      }}
+                    >
+                      {sizes.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <div className="row">
+                  <button className="cta" onClick={() => updateCart(item.id, 1)}>
+                    Add to Cart
+                  </button>
+                  <button className="ghost" onClick={() => updateCart(item.id, -1)}>
+                    Remove
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
     </main>

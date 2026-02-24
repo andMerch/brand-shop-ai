@@ -17,9 +17,22 @@ type CatalogResponse = {
   items: Array<{
     id: string;
     name: string;
+    brand?: string | null;
+    description?: string | null;
+    category?: string | null;
+    imageUrl?: string | null;
     productType?: string | null;
     baseCost: number;
     price: number;
+    variants?: Array<{
+      id: string;
+      sku?: string | null;
+      size?: string | null;
+      color?: string | null;
+      imageUrl?: string | null;
+      baseCost: number;
+      price: number;
+    }>;
   }>;
 };
 

@@ -5,6 +5,13 @@ export type PricingContext = {
   decorationLocations?: number;
 };
 
+export type PricingRule = {
+  target: "GLOBAL" | "CATEGORY" | "PRODUCT" | "VARIANT" | "SIZE" | "COLOR";
+  targetValue?: string | null;
+  deltaType: "FIXED" | "PERCENT";
+  deltaValue: number;
+};
+
 export const defaultDirectMarkupTiers = [
   { min: 5.01, max: 9.99, percent: 85 },
   { min: 10, max: 29.99, percent: 60 },
@@ -66,5 +73,113 @@ export function calculateItemPrice(config: PricingConfigInput, ctx: PricingConte
     markupPercent,
     baseMarkup,
     price: baseCost + baseMarkup + decorationTotal
+  };
+}
+
+type RuleMatchContext = {
+  productId?: string | null;
+  category?: string | null;
+  variantId?: string | null;
+  size?: string | null;
+  color?: string | null;
+};
+
+function normalizeValue(value?: string | null) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function pickMostSpecificRule(
+  rules: PricingRule[],
+  deltaType: PricingRule["deltaType"],
+  ctx: RuleMatchContext
+) {
+  const orderedTargets: PricingRule["target"][] = [
+    "VARIANT",
+    "PRODUCT",
+    "CATEGORY",
+    "GLOBAL"
+  ];
+
+  for (const target of orderedTargets) {
+    const match = rules.find((rule) => {
+      if (rule.deltaType !== deltaType) return false;
+      if (rule.target !== target) return false;
+      if (target === "GLOBAL") return true;
+      const ruleValue = normalizeValue(rule.targetValue ?? "");
+      if (target === "VARIANT") return ruleValue && ruleValue === normalizeValue(ctx.variantId);
+      if (target === "PRODUCT") return ruleValue && ruleValue === normalizeValue(ctx.productId);
+      if (target === "CATEGORY") return ruleValue && ruleValue === normalizeValue(ctx.category);
+      return false;
+    });
+    if (match) return match;
+  }
+
+  return null;
+}
+
+function pickRuleForAttribute(
+  rules: PricingRule[],
+  deltaType: PricingRule["deltaType"],
+  target: "SIZE" | "COLOR",
+  value?: string | null
+) {
+  const normalizedValue = normalizeValue(value);
+  if (!normalizedValue) return null;
+  return (
+    rules.find(
+      (rule) =>
+        rule.deltaType === deltaType &&
+        rule.target === target &&
+        normalizeValue(rule.targetValue ?? "") === normalizedValue
+    ) ?? null
+  );
+}
+
+export function applyPricingRules({
+  baseCost,
+  decorationBase,
+  decorationTotal,
+  config,
+  rules,
+  context,
+  defaultPercent,
+  percentBaseOverride
+}: {
+  baseCost: number;
+  decorationBase: number;
+  decorationTotal: number;
+  config: PricingConfigInput;
+  rules: PricingRule[];
+  context: RuleMatchContext;
+  defaultPercent: number;
+  percentBaseOverride?: number;
+}) {
+  const basePercentRule = pickMostSpecificRule(rules, "PERCENT", context);
+  const sizePercentRule = pickRuleForAttribute(rules, "PERCENT", "SIZE", context.size);
+  const colorPercentRule = pickRuleForAttribute(rules, "PERCENT", "COLOR", context.color);
+  const percentTotal =
+    (basePercentRule?.deltaValue ?? defaultPercent ?? 0) +
+    (sizePercentRule?.deltaValue ?? 0) +
+    (colorPercentRule?.deltaValue ?? 0);
+
+  const baseFixedRule = pickMostSpecificRule(rules, "FIXED", context);
+  const sizeFixedRule = pickRuleForAttribute(rules, "FIXED", "SIZE", context.size);
+  const colorFixedRule = pickRuleForAttribute(rules, "FIXED", "COLOR", context.color);
+  const fixedTotal =
+    (baseFixedRule?.deltaValue ?? 0) +
+    (sizeFixedRule?.deltaValue ?? 0) +
+    (colorFixedRule?.deltaValue ?? 0);
+
+  const percentBase =
+    percentBaseOverride ??
+    (config.decoration.applyPercentMarkup
+      ? baseCost + decorationBase
+      : baseCost);
+  const percentAmount = (percentBase * percentTotal) / 100;
+
+  return {
+    percentTotal,
+    fixedTotal,
+    percentAmount
   };
 }

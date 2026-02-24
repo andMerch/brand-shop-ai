@@ -14,6 +14,7 @@ import { ghlRoutes } from "./routes/ghl.js";
 import { catalogRoutes } from "./routes/catalogs.js";
 import { storefrontRoutes } from "./routes/storefront.js";
 import { storesRoutes } from "./routes/stores.js";
+import { pricingRulesRoutes } from "./routes/pricingRules.js";
 
 export function buildServer() {
   const app = fastify({ logger: true, bodyLimit: 25 * 1024 * 1024 });
@@ -67,6 +68,7 @@ export function buildServer() {
   app.register(catalogRoutes);
   app.register(storefrontRoutes);
   app.register(storesRoutes);
+  app.register(pricingRulesRoutes);
 
   return app;
 }

@@ -70,6 +70,20 @@ enum CatalogSource {
 
 }
 
+enum PricingRuleTarget {
+  GLOBAL
+  CATEGORY
+  PRODUCT
+  VARIANT
+  SIZE
+  COLOR
+}
+
+enum PricingRuleDeltaType {
+  FIXED
+  PERCENT
+}
+
 model Tenant {
   id               String             @id @default(cuid())
   name             String
@@ -153,6 +167,10 @@ model Product {
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   name        String
+  brand       String?
+  description String?
+  category    String?
+  imageUrl    String?
   productType String?
   supplierId  String?
   supplier    Supplier? @relation(fields: [supplierId], references: [id])
@@ -164,7 +182,26 @@ model Product {
   updatedAt   DateTime @updatedAt
   catalogItems CatalogItem[]
   orderItems   OrderItem[]
+  variants     ProductVariant[]
 
+}
+
+model ProductVariant {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  externalId String?
+  sku        String?
+  size       String?
+  color      String?
+  imageUrl   String?
+  baseCost   Float?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([productId])
+  @@unique([productId, externalId])
 }
 
 model StorefrontDomain {
@@ -211,10 +248,26 @@ model OrderItem {
   order       Order   @relation(fields: [orderId], references: [id])
   productId   String?
   product     Product? @relation(fields: [productId], references: [id])
+  variantId   String?
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
   productName String
   quantity    Int
   unitPrice   Float
+  metadata    Json?
 
+}
+
+model PricingRule {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  target      PricingRuleTarget
+  targetValue String?
+  deltaType   PricingRuleDeltaType
+  deltaValue  Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, target])
 }
 
 model RoutingRule {

@@ -94,11 +94,25 @@ export const StorefrontCheckoutSchema = z.object({
     .array(
       z.object({
         productId: z.string().min(1),
+        variantId: z.string().optional(),
         quantity: z.number().int().min(1)
       })
     )
     .min(1),
   decorationLocations: z.number().int().min(1).optional()
+});
+
+export const PricingRuleSchema = z.object({
+  tenantId: z.string().optional(),
+  target: z.enum(["GLOBAL", "CATEGORY", "PRODUCT", "VARIANT", "SIZE", "COLOR"]),
+  targetValue: z.string().optional(),
+  deltaType: z.enum(["FIXED", "PERCENT"]),
+  deltaValue: z.number()
+});
+
+export const PricingRuleBatchSchema = z.object({
+  tenantId: z.string().optional(),
+  rules: z.array(PricingRuleSchema).min(1)
 });
 
 export const CatalogSyncSchema = z.object({
@@ -126,5 +140,7 @@ export type ReputationRequestInput = z.infer<typeof ReputationRequestSchema>;
 export type PricingConfigInput = z.infer<typeof PricingConfigSchema>;
 export type StorefrontDomainInput = z.infer<typeof StorefrontDomainSchema>;
 export type StorefrontCheckoutInput = z.infer<typeof StorefrontCheckoutSchema>;
+export type PricingRuleInput = z.infer<typeof PricingRuleSchema>;
+export type PricingRuleBatchInput = z.infer<typeof PricingRuleBatchSchema>;
 export type CatalogSyncInput = z.infer<typeof CatalogSyncSchema>;
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;

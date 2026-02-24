@@ -7,6 +7,16 @@ type PrintfulProduct = {
 };
 
 type PrintfulVariant = {
+  id?: number;
+  external_id?: string;
+  sku?: string;
+  name?: string;
+  size?: string;
+  color?: string;
+  color_code?: string;
+  image?: string;
+  image_url?: string;
+  files?: Array<{ preview_url?: string }>;
   price?: string | number;
   retail_price?: string | number;
 };
@@ -86,6 +96,14 @@ export async function syncPrintfulCatalog(input: {
 
     const detailsData = (await detailsResponse.json()) as {
       result?: {
+        sync_product?: {
+          name?: string;
+          thumbnail_url?: string;
+          image?: string;
+          description?: string;
+          brand?: string;
+          type_name?: string;
+        };
         sync_variants?: PrintfulVariant[];
       };
     };
@@ -94,6 +112,19 @@ export async function syncPrintfulCatalog(input: {
     const rawCost = variant?.price ?? variant?.retail_price ?? 0;
     const baseCost =
       typeof rawCost === "string" ? Number.parseFloat(rawCost) : Number(rawCost ?? 0);
+
+    const productName = detailsData.result?.sync_product?.name ?? item.name;
+    const productImage =
+      detailsData.result?.sync_product?.thumbnail_url ??
+      detailsData.result?.sync_product?.image ??
+      variant?.image ??
+      variant?.image_url ??
+      variant?.files?.[0]?.preview_url ??
+      undefined;
+    const productDescription = detailsData.result?.sync_product?.description;
+    const productBrand = detailsData.result?.sync_product?.brand;
+    const productCategory = detailsData.result?.sync_product?.type_name;
+    const productType = productCategory;
 
     const existing = await prisma.product.findFirst({
       where: {
@@ -107,7 +138,12 @@ export async function syncPrintfulCatalog(input: {
       ? await prisma.product.update({
           where: { id: existing.id },
           data: {
-            name: item.name,
+            name: productName,
+            brand: productBrand,
+            description: productDescription,
+            category: productCategory,
+            productType,
+            imageUrl: productImage,
             price: Number.isNaN(baseCost) ? 0 : baseCost,
             source: "PRINTFUL",
             metadata: detailsData.result as unknown as Record<string, unknown> as any
@@ -117,13 +153,67 @@ export async function syncPrintfulCatalog(input: {
           data: {
             tenantId: input.tenantId,
             supplierId: supplier.id,
-            name: item.name,
+            name: productName,
+            brand: productBrand,
+            description: productDescription,
+            category: productCategory,
+            productType,
+            imageUrl: productImage,
             price: Number.isNaN(baseCost) ? 0 : baseCost,
             source: "PRINTFUL",
             externalId: String(item.id),
             metadata: detailsData.result as unknown as Record<string, unknown> as any
           }
         });
+
+    const variants = detailsData.result?.sync_variants ?? [];
+    for (const v of variants) {
+      const rawVariantCost = v.price ?? v.retail_price ?? 0;
+      const variantCost =
+        typeof rawVariantCost === "string"
+          ? Number.parseFloat(rawVariantCost)
+          : Number(rawVariantCost ?? 0);
+      const variantExternal = v.external_id ?? String(v.id ?? "");
+      if (!variantExternal) continue;
+
+      const variantImage =
+        v.image ??
+        v.image_url ??
+        v.files?.[0]?.preview_url ??
+        productImage ??
+        undefined;
+
+      const existingVariant = await prisma.productVariant.findFirst({
+        where: { productId: product.id, externalId: variantExternal }
+      });
+
+      if (existingVariant) {
+        await prisma.productVariant.update({
+          where: { id: existingVariant.id },
+          data: {
+            sku: v.sku,
+            size: v.size,
+            color: v.color,
+            imageUrl: variantImage,
+            baseCost: Number.isNaN(variantCost) ? 0 : variantCost,
+            metadata: v as unknown as Record<string, unknown> as any
+          }
+        });
+      } else {
+        await prisma.productVariant.create({
+          data: {
+            productId: product.id,
+            externalId: variantExternal,
+            sku: v.sku,
+            size: v.size,
+            color: v.color,
+            imageUrl: variantImage,
+            baseCost: Number.isNaN(variantCost) ? 0 : variantCost,
+            metadata: v as unknown as Record<string, unknown> as any
+          }
+        });
+      }
+    }
 
     if (catalogId) {
       const exists = await prisma.catalogItem.findFirst({

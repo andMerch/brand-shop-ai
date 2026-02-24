@@ -1,15 +1,10 @@
-const steps = [
-  { title: "Organization Type", status: "complete" },
-  { title: "AI Product Suggestions", status: "active" },
-  { title: "Choose Theme", status: "pending" },
-  { title: "Go Live", status: "pending" }
-];
+import StoreBuilderClient from "./StoreBuilderClient";
 
-const suggestions = [
-  { name: "Spirit T-Shirts", meta: "Trending" },
-  { name: "Team Hoodies", meta: "Seasonal" },
-  { name: "Baseball Caps", meta: "Regional" },
-  { name: "Staff Polos", meta: "Requested" }
+const steps = [
+  { title: "Distributor Catalog", status: "active" },
+  { title: "AI Curation", status: "pending" },
+  { title: "Theme & Branding", status: "pending" },
+  { title: "Go Live", status: "pending" }
 ];
 
 export default function StoreBuilderPage() {
@@ -23,8 +18,8 @@ export default function StoreBuilderPage() {
         </div>
         <div className="hero-card">
           <h2>Workflow Triggered</h2>
-          <p>GHL workflow fires → AI generates catalog → store ready for review.</p>
-          <button className="cta">Trigger Build</button>
+          <p>GHL workflow fires → catalog curated → store ready for review.</p>
+          <button className="cta">View Workflow</button>
         </div>
       </section>
 
@@ -40,16 +35,7 @@ export default function StoreBuilderPage() {
               ))}
             </div>
           </div>
-          <div className="card">
-            <strong>AI Suggestions</strong>
-            <div className="list">
-              {suggestions.map((item) => (
-                <div key={item.name}>
-                  {item.name} <span className="tag">{item.meta}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <StoreBuilderClient />
           <div className="card">
             <strong>Brand Controls</strong>
             <p>Theme presets, pricing rules, and catalog locks applied automatically.</p>
