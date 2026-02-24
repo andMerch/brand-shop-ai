@@ -66,8 +66,14 @@ enum OrderStatus {
 enum CatalogSource {
   SSACTIVEWEAR
   PRINTFUL
+  SANMAR
   MANUAL
 
+}
+
+enum SupplierType {
+  SSACTIVEWEAR
+  SANMAR
 }
 
 enum PricingRuleTarget {
@@ -84,6 +90,12 @@ enum PricingRuleDeltaType {
   PERCENT
 }
 
+enum PricingConfigScope {
+  GLOBAL
+  TENANT
+  STORE
+}
+
 model Tenant {
   id               String             @id @default(cuid())
   name             String
@@ -97,6 +109,7 @@ model Tenant {
   routingRules     RoutingRule[]
   decorators       Decorator[]
   suppliers        Supplier[]
+  supplierAccounts SupplierAccount[]
   orders           Order[]
   dashboardMetrics DashboardMetric[]
   aiVisionJobs     AiVisionJob[]
@@ -271,6 +284,18 @@ model PricingRule {
   @@index([tenantId, target])
 }
 
+model PricingConfig {
+  id        String             @id @default(cuid())
+  scope     PricingConfigScope
+  scopeId   String?
+  config    Json
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@unique([scope, scopeId])
+  @@index([scope])
+}
+
 model RoutingRule {
   id               String    @id @default(cuid())
   tenantId         String
@@ -308,6 +333,21 @@ model Supplier {
   rules      RoutingRule[]
   products   Product[]
 
+}
+
+model SupplierAccount {
+  id          String       @id @default(cuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  supplier    SupplierType
+  credentials Json
+  baseUrl     String?
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([tenantId, supplier])
+  @@unique([tenantId, supplier])
 }
 
 model RoutingDecision {

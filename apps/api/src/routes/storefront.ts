@@ -3,43 +3,81 @@ import { prisma } from "../lib/db.js";
 import { StorefrontCheckoutSchema, StorefrontDomainSchema } from "@app/shared";
 import { buildDefaultPricing, applyPricingRules, PricingRule } from "../services/pricing.js";
 
+function mergeDeep<T extends Record<string, any>>(...sources: Array<T | null | undefined>) {
+  const result: Record<string, any> = {};
+  for (const source of sources) {
+    if (!source || typeof source !== "object") continue;
+    for (const [key, value] of Object.entries(source)) {
+      if (
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        typeof result[key] === "object" &&
+        !Array.isArray(result[key])
+      ) {
+        result[key] = mergeDeep(result[key], value);
+      } else if (value !== undefined) {
+        result[key] = value;
+      }
+    }
+  }
+  return result as T;
+}
+
+async function resolvePricingConfig(params: { storeId?: string; tenantId?: string; storeConfig?: any }) {
+  const base = buildDefaultPricing("DISTRIBUTOR");
+  const globalConfig = await prisma.pricingConfig.findFirst({
+    where: { scope: "GLOBAL" }
+  });
+  const tenantConfig = params.tenantId
+    ? await prisma.pricingConfig.findFirst({
+        where: { scope: "TENANT", scopeId: params.tenantId }
+      })
+    : null;
+  const storeConfig = params.storeId
+    ? await prisma.pricingConfig.findFirst({
+        where: { scope: "STORE", scopeId: params.storeId }
+      })
+    : null;
+  const embedded = params.storeConfig?.pricing ?? null;
+  return mergeDeep(base as any, globalConfig?.config as any, tenantConfig?.config as any, storeConfig?.config as any, embedded as any);
+}
+
 function calculateOrderTotals(pricing: any, subtotal: number) {
   const fees = pricing.checkoutFees ?? {};
   const shipping = Number(fees.shipping ?? 0);
-  const platformFee = Number(fees.platformFee ?? 0);
+  const platformFeeFixed = Number(fees.platformFee ?? 0);
   const fulfillmentDecorator = Number(fees.fulfillmentFeeDecorator ?? 0);
   const fulfillmentPlatform = Number(fees.fulfillmentFeePlatform ?? 0);
   const orderFee = Number(fees.orderFee ?? 0);
-  const transactionFeeRate = Number(fees.transactionFeeRate ?? 0);
+  const platformFeeRate = Number(
+    fees.platformFeeRate ?? fees.transactionFeeRate ?? 0
+  );
   const taxRate = Number(fees.taxRate ?? 0);
   const ccRate = Number(fees.ccRate ?? 0);
 
-  const transactionFee = subtotal * transactionFeeRate;
+  const fixedFees =
+    platformFeeFixed + fulfillmentDecorator + fulfillmentPlatform + orderFee;
+  const platformFeeRateAmount = (subtotal + fixedFees) * platformFeeRate;
   const taxableBase = subtotal + shipping;
   const tax = taxableBase * taxRate;
   const ccFee = (subtotal + shipping + tax) * ccRate;
+  const platformFees = fixedFees + platformFeeRateAmount + ccFee;
 
-  const total =
-    subtotal +
-    shipping +
-    platformFee +
-    fulfillmentDecorator +
-    fulfillmentPlatform +
-    orderFee +
-    transactionFee +
-    tax +
-    ccFee;
+  const total = subtotal + shipping + tax + platformFees;
 
   return {
     subtotal,
     shipping,
-    platformFee,
+    platformFees,
     fulfillmentDecorator,
     fulfillmentPlatform,
     orderFee,
-    transactionFee,
     tax,
     ccFee,
+    platformFeeRate,
+    platformFeeFixed,
+    platformFeeRateAmount,
     total
   };
 }
@@ -134,7 +172,11 @@ export async function storefrontRoutes(app: FastifyInstance) {
     }
 
     const config = (domain.store.config as Record<string, unknown> | null) ?? {};
-    const pricing = (config.pricing as Record<string, unknown> | null) ?? buildDefaultPricing("DISTRIBUTOR");
+    const pricing = await resolvePricingConfig({
+      storeId: domain.store.id,
+      tenantId: domain.store.tenantId,
+      storeConfig: config
+    });
 
     return reply.send({
       ok: true,
@@ -172,7 +214,11 @@ export async function storefrontRoutes(app: FastifyInstance) {
     }
 
     const config = (store.config as Record<string, unknown> | null) ?? {};
-    const pricing = (config.pricing as Record<string, unknown> | null) ?? buildDefaultPricing("DISTRIBUTOR");
+    const pricing = await resolvePricingConfig({
+      storeId: store.id,
+      tenantId: store.tenantId,
+      storeConfig: config
+    });
 
     const catalogItems = store.catalogs.flatMap((catalog) =>
       catalog.items.map((item) => ({
@@ -256,7 +302,11 @@ export async function storefrontRoutes(app: FastifyInstance) {
     }
 
     const config = (store.config as Record<string, unknown> | null) ?? {};
-    const pricing = (config.pricing as Record<string, unknown> | null) ?? buildDefaultPricing("DISTRIBUTOR");
+    const pricing = await resolvePricingConfig({
+      storeId: store.id,
+      tenantId: store.tenantId,
+      storeConfig: config
+    });
     const locationCount = Math.max(decorationLocations ?? 1, 1);
 
     const productIds = items.map((item) => item.productId);

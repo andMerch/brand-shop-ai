@@ -74,6 +74,7 @@ export const PricingConfigSchema = z.object({
     taxRate: z.number().min(0).default(0.07),
     ccRate: z.number().min(0).default(0.03),
     platformFee: z.number().min(0).default(4.94),
+    platformFeeRate: z.number().min(0).optional(),
     fulfillmentFeeDecorator: z.number().min(0).optional(),
     fulfillmentFeePlatform: z.number().min(0).optional(),
     transactionFeeRate: z.number().min(0).optional(),
@@ -115,11 +116,26 @@ export const PricingRuleBatchSchema = z.object({
   rules: z.array(PricingRuleSchema).min(1)
 });
 
+export const PricingConfigUpsertSchema = z.object({
+  scope: z.enum(["GLOBAL", "TENANT", "STORE"]),
+  scopeId: z.string().optional(),
+  config: PricingConfigSchema
+});
+
+export const SupplierAccountSchema = z.object({
+  tenantId: z.string().min(1),
+  supplier: z.enum(["SSACTIVEWEAR", "SANMAR"]),
+  credentials: z.record(z.any()),
+  baseUrl: z.string().optional(),
+  active: z.boolean().optional()
+});
+
 export const CatalogSyncSchema = z.object({
   tenantId: z.string().min(1),
   storeId: z.string().optional(),
-  source: z.enum(["ssactivewear", "printful"]),
-  limit: z.number().int().min(1).max(500).optional()
+  source: z.enum(["ssactivewear", "printful", "sanmar"]),
+  limit: z.number().int().min(1).max(500).optional(),
+  supplierAccountId: z.string().optional()
 });
 
 export const DashboardSummarySchema = z.object({
@@ -142,5 +158,7 @@ export type StorefrontDomainInput = z.infer<typeof StorefrontDomainSchema>;
 export type StorefrontCheckoutInput = z.infer<typeof StorefrontCheckoutSchema>;
 export type PricingRuleInput = z.infer<typeof PricingRuleSchema>;
 export type PricingRuleBatchInput = z.infer<typeof PricingRuleBatchSchema>;
+export type PricingConfigUpsertInput = z.infer<typeof PricingConfigUpsertSchema>;
+export type SupplierAccountInput = z.infer<typeof SupplierAccountSchema>;
 export type CatalogSyncInput = z.infer<typeof CatalogSyncSchema>;
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;

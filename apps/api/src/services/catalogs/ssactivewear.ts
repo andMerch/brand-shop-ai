@@ -29,6 +29,12 @@ type SsProduct = {
   piecePrice?: number;
 };
 
+type SsAccount = {
+  accountNumber: string;
+  apiKey: string;
+  baseUrl?: string;
+};
+
 function resolveProductName(item: SsProduct) {
   return item.title || item.name || item.styleName || "SSActivewear Product";
 }
@@ -67,16 +73,21 @@ export async function syncSsActivewearCatalog(input: {
   tenantId: string;
   storeId?: string;
   limit?: number;
+  account?: SsAccount;
 }) {
-  if (!config.ssactivewear.accountNumber || !config.ssactivewear.apiKey) {
+  const accountNumber = input.account?.accountNumber ?? config.ssactivewear.accountNumber;
+  const apiKey = input.account?.apiKey ?? config.ssactivewear.apiKey;
+  const baseUrl = input.account?.baseUrl ?? config.ssactivewear.baseUrl;
+
+  if (!accountNumber || !apiKey) {
     throw new Error("ssactivewear_credentials_missing");
   }
 
   const auth = Buffer.from(
-    `${config.ssactivewear.accountNumber}:${config.ssactivewear.apiKey}`
+    `${accountNumber}:${apiKey}`
   ).toString("base64");
 
-  const url = new URL(`${config.ssactivewear.baseUrl}/products/`);
+  const url = new URL(`${baseUrl}/products/`);
   if (input.limit) {
     // SSActivewear commonly supports limit + page (offset is optional).
     url.searchParams.set("limit", String(input.limit));

@@ -35,7 +35,7 @@ export function buildDefaultPricing(model: PricingConfigInput["model"] = "DISTRI
       platformFee: model === "DISTRIBUTOR" ? 4.94 : 3,
       fulfillmentFeeDecorator: model === "DISTRIBUTOR" ? 3 : undefined,
       fulfillmentFeePlatform: model === "DISTRIBUTOR" ? 0.5 : undefined,
-      transactionFeeRate: model === "DISTRIBUTOR" ? 0.03 : undefined,
+      platformFeeRate: model === "DISTRIBUTOR" ? 0.03 : undefined,
       orderFee: model === "DISTRIBUTOR" ? 0.79 : undefined
     }
   } satisfies PricingConfigInput;
