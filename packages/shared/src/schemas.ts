@@ -88,6 +88,19 @@ export const StorefrontDomainSchema = z.object({
   isPrimary: z.boolean().optional()
 });
 
+export const StorefrontCheckoutSchema = z.object({
+  storeId: z.string().min(1),
+  items: z
+    .array(
+      z.object({
+        productId: z.string().min(1),
+        quantity: z.number().int().min(1)
+      })
+    )
+    .min(1),
+  decorationLocations: z.number().int().min(1).optional()
+});
+
 export const CatalogSyncSchema = z.object({
   tenantId: z.string().min(1),
   storeId: z.string().optional(),
@@ -112,5 +125,6 @@ export type RouteOrderInput = z.infer<typeof RouteOrderSchema>;
 export type ReputationRequestInput = z.infer<typeof ReputationRequestSchema>;
 export type PricingConfigInput = z.infer<typeof PricingConfigSchema>;
 export type StorefrontDomainInput = z.infer<typeof StorefrontDomainSchema>;
+export type StorefrontCheckoutInput = z.infer<typeof StorefrontCheckoutSchema>;
 export type CatalogSyncInput = z.infer<typeof CatalogSyncSchema>;
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;

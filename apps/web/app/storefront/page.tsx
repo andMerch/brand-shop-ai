@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import StorefrontClient from "./StorefrontClient";
 
 type StorefrontResponse = {
   ok: boolean;
@@ -65,32 +66,11 @@ export default async function StorefrontPage({
   const catalog = await fetchCatalog(data.store.id);
 
   return (
-    <main className="container">
-      <section className="hero">
-        <div>
-          <span className="badge">Brand-Shop Storefront</span>
-          <h1>{data.store.name}</h1>
-          <p>Powered by GHL checkout and Brand-Shop pricing rules.</p>
-        </div>
-        <div className="hero-card">
-          <h2>Checkout</h2>
-          <p>Checkout is managed in GoHighLevel. Add to cart coming soon.</p>
-          <button className="cta">Request Quote</button>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="card-grid">
-          {(catalog?.items ?? []).map((item) => (
-            <div className="card" key={item.id}>
-              <strong>{item.name}</strong>
-              <p className="muted">{item.productType ?? "Catalog Item"}</p>
-              <div className="price">${item.price.toFixed(2)}</div>
-              <button className="cta">Add to Cart</button>
-            </div>
-          ))}
-        </div>
-      </section>
-    </main>
+    <StorefrontClient
+      storeId={data.store.id}
+      storeName={data.store.name}
+      apiBase={apiBase}
+      items={catalog?.items ?? []}
+    />
   );
 }

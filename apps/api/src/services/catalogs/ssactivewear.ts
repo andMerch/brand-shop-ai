@@ -45,9 +45,8 @@ export async function syncSsActivewearCatalog(input: {
 
   const url = new URL(`${config.ssactivewear.baseUrl}/products/`);
   if (input.limit) {
-    // SSActivewear pagination often uses page + offset (page size).
+    // SSActivewear commonly supports limit + page (offset is optional).
     url.searchParams.set("limit", String(input.limit));
-    url.searchParams.set("offset", String(input.limit));
     url.searchParams.set("page", "1");
   }
 
@@ -68,6 +67,16 @@ export async function syncSsActivewearCatalog(input: {
     ? (data as SsProduct[])
     : ((data as { products?: SsProduct[] }).products ?? []);
   const limitedProducts = input.limit ? products.slice(0, input.limit) : products;
+  const deduped = new Map<string, SsProduct>();
+  for (const item of limitedProducts) {
+    const resolvedExternalId = resolveExternalId(item);
+    const key = resolvedExternalId ? String(resolvedExternalId) : resolveProductName(item);
+    if (!key) continue;
+    if (!deduped.has(key)) {
+      deduped.set(key, item);
+    }
+  }
+  const uniqueProducts = Array.from(deduped.values());
 
   const existingSupplier = await prisma.supplier.findFirst({
     where: { tenantId: input.tenantId, name: "SSActivewear" }
@@ -102,7 +111,7 @@ export async function syncSsActivewearCatalog(input: {
   }
 
   const synced: string[] = [];
-  for (const item of limitedProducts) {
+  for (const item of uniqueProducts) {
     const resolvedExternalId = resolveExternalId(item);
     const externalId = resolvedExternalId ? String(resolvedExternalId) : undefined;
     const name = resolveProductName(item);

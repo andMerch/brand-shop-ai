@@ -1,7 +1,48 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "../lib/db.js";
-import { StorefrontDomainSchema } from "@app/shared";
+import { StorefrontCheckoutSchema, StorefrontDomainSchema } from "@app/shared";
 import { buildDefaultPricing, calculateItemPrice } from "../services/pricing.js";
+
+function calculateOrderTotals(pricing: any, subtotal: number) {
+  const fees = pricing.checkoutFees ?? {};
+  const shipping = Number(fees.shipping ?? 0);
+  const platformFee = Number(fees.platformFee ?? 0);
+  const fulfillmentDecorator = Number(fees.fulfillmentFeeDecorator ?? 0);
+  const fulfillmentPlatform = Number(fees.fulfillmentFeePlatform ?? 0);
+  const orderFee = Number(fees.orderFee ?? 0);
+  const transactionFeeRate = Number(fees.transactionFeeRate ?? 0);
+  const taxRate = Number(fees.taxRate ?? 0);
+  const ccRate = Number(fees.ccRate ?? 0);
+
+  const transactionFee = subtotal * transactionFeeRate;
+  const taxableBase = subtotal + shipping;
+  const tax = taxableBase * taxRate;
+  const ccFee = (subtotal + shipping + tax) * ccRate;
+
+  const total =
+    subtotal +
+    shipping +
+    platformFee +
+    fulfillmentDecorator +
+    fulfillmentPlatform +
+    orderFee +
+    transactionFee +
+    tax +
+    ccFee;
+
+  return {
+    subtotal,
+    shipping,
+    platformFee,
+    fulfillmentDecorator,
+    fulfillmentPlatform,
+    orderFee,
+    transactionFee,
+    tax,
+    ccFee,
+    total
+  };
+}
 
 export async function storefrontRoutes(app: FastifyInstance) {
   app.get("/api/storefront/resolve", async (request, reply) => {
@@ -88,6 +129,79 @@ export async function storefrontRoutes(app: FastifyInstance) {
       });
 
     return reply.send({ ok: true, storeId, items: priced });
+  });
+
+  app.post("/api/storefront/checkout", async (request, reply) => {
+    const parse = StorefrontCheckoutSchema.safeParse(request.body);
+    if (!parse.success) {
+      return reply.status(400).send({ ok: false, error: parse.error.flatten() });
+    }
+
+    const { storeId, items, decorationLocations } = parse.data;
+    const store = await prisma.store.findFirst({ where: { id: storeId } });
+    if (!store) {
+      return reply.status(404).send({ ok: false, error: "store_not_found" });
+    }
+
+    const config = (store.config as Record<string, unknown> | null) ?? {};
+    const pricing = (config.pricing as Record<string, unknown> | null) ?? buildDefaultPricing("DISTRIBUTOR");
+    const locationCount = Math.max(decorationLocations ?? 1, 1);
+
+    const productIds = items.map((item) => item.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds }, tenantId: store.tenantId }
+    });
+    const productMap = new Map(products.map((product) => [product.id, product]));
+
+    for (const item of items) {
+      if (!productMap.has(item.productId)) {
+        return reply
+          .status(400)
+          .send({ ok: false, error: "product_not_found", productId: item.productId });
+      }
+    }
+
+    const lineItems = items.map((item) => {
+      const product = productMap.get(item.productId)!;
+      const baseCost = product.price ?? 0;
+      const priceBreakdown = calculateItemPrice(pricing as any, {
+        baseCost,
+        decorationLocations: locationCount
+      });
+      return {
+        productId: product.id,
+        productName: product.name,
+        quantity: item.quantity,
+        unitPrice: priceBreakdown.price
+      };
+    });
+
+    const subtotal = lineItems.reduce(
+      (sum, item) => sum + item.unitPrice * item.quantity,
+      0
+    );
+    const totals = calculateOrderTotals(pricing as any, subtotal);
+
+    const order = await prisma.order.create({
+      data: {
+        tenantId: store.tenantId,
+        storeId: store.id,
+        status: "NEW",
+        total: totals.total,
+        currency: "USD",
+        items: {
+          create: lineItems
+        }
+      }
+    });
+
+    return reply.send({
+      ok: true,
+      orderId: order.id,
+      total: totals.total,
+      currency: order.currency,
+      breakdown: totals
+    });
   });
 
   app.post("/api/storefront/domains", async (request, reply) => {
