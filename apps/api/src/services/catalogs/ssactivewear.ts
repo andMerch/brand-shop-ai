@@ -99,7 +99,8 @@ export async function syncSsActivewearCatalog(input: {
 
   const synced: string[] = [];
   for (const item of products) {
-    const externalId = resolveExternalId(item);
+    const resolvedExternalId = resolveExternalId(item);
+    const externalId = resolvedExternalId ? String(resolvedExternalId) : undefined;
     const name = resolveProductName(item);
     const baseCost = resolveBaseCost(item);
 
