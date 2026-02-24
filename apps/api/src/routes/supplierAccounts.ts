@@ -3,7 +3,7 @@ import { prisma } from "../lib/db.js";
 import type { Prisma } from "@app/db";
 import { SupplierAccountSchema } from "@app/shared";
 
-function normalizeCredentials(input: Record<string, unknown>): Prisma.InputJsonValue {
+function normalizeCredentials(input: Record<string, unknown>) {
   const trimmed: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (typeof value === "string") {
@@ -12,7 +12,7 @@ function normalizeCredentials(input: Record<string, unknown>): Prisma.InputJsonV
       trimmed[key] = value;
     }
   }
-  return trimmed as Prisma.InputJsonValue;
+  return trimmed;
 }
 
 export async function supplierAccountsRoutes(app: FastifyInstance) {
@@ -51,8 +51,8 @@ export async function supplierAccountsRoutes(app: FastifyInstance) {
     const normalizedCredentials = normalizeCredentials(credentials);
 
     if (supplier === "SSACTIVEWEAR") {
-      const accountNumber = normalizedCredentials.accountNumber as string | undefined;
-      const apiKey = normalizedCredentials.apiKey as string | undefined;
+      const accountNumber = String(normalizedCredentials.accountNumber ?? "").trim();
+      const apiKey = String(normalizedCredentials.apiKey ?? "").trim();
       if (!accountNumber || !apiKey) {
         return reply.status(400).send({
           ok: false,
@@ -69,7 +69,7 @@ export async function supplierAccountsRoutes(app: FastifyInstance) {
       ? await prisma.supplierAccount.update({
           where: { id: existing.id },
           data: {
-            credentials: normalizedCredentials,
+            credentials: normalizedCredentials as Prisma.InputJsonValue,
             baseUrl,
             active: active ?? true
           }
@@ -78,7 +78,7 @@ export async function supplierAccountsRoutes(app: FastifyInstance) {
           data: {
             tenantId,
             supplier,
-            credentials: normalizedCredentials,
+            credentials: normalizedCredentials as Prisma.InputJsonValue,
             baseUrl,
             active: active ?? true
           }
