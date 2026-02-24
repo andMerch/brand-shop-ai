@@ -1,11 +1,25 @@
 {
   email admin@brand-shop.ai
+  on_demand_tls {
+    ask http://api:3001/internal/caddy-ask
+  }
 }
 
-brand-shop.ai {
+:80 {
+  @api host api.brand-shop.ai
+  reverse_proxy @api api:3001
+  @app host app.brand-shop.ai
+  reverse_proxy @app web:3000
   reverse_proxy web:3000
 }
 
-api.brand-shop.ai {
-  reverse_proxy api:3001
+:443 {
+  tls {
+    on_demand
+  }
+  @api host api.brand-shop.ai
+  reverse_proxy @api api:3001
+  @app host app.brand-shop.ai
+  reverse_proxy @app web:3000
+  reverse_proxy web:3000
 }

@@ -2,6 +2,7 @@ import fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import { config } from "./lib/config.js";
+import { prisma } from "./lib/db.js";
 import { webhooksRoutes } from "./routes/webhooks.js";
 import { storeBuilderRoutes } from "./routes/storeBuilder.js";
 import { aiVisionRoutes } from "./routes/aiVision.js";
@@ -25,6 +26,32 @@ export function buildServer() {
     limits: {
       fileSize: 25 * 1024 * 1024
     }
+  });
+
+  app.get("/internal/caddy-ask", async (request, reply) => {
+    const host =
+      (request.query as { domain?: string; host?: string } | undefined)?.domain ??
+      (request.query as { domain?: string; host?: string } | undefined)?.host;
+    if (!host) {
+      return reply.status(400).send("missing_domain");
+    }
+
+    const baseDomain = config.brandBaseDomain;
+    if (host === `app.${baseDomain}` || host === `api.${baseDomain}`) {
+      return reply.send("ok");
+    }
+    if (host.endsWith(`.${baseDomain}`)) {
+      return reply.send("ok");
+    }
+
+    const existing = await prisma.storefrontDomain.findFirst({
+      where: { domain: host }
+    });
+    if (existing) {
+      return reply.send("ok");
+    }
+
+    return reply.status(403).send("forbidden");
   });
 
   app.get("/health", async () => ({ ok: true }));
