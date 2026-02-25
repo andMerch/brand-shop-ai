@@ -10,6 +10,7 @@ const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/store-builder", label: "AI Store Builder" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/mockups", label: "Mockup Studio" },
   { href: "/ai-vision", label: "AI Vision" },
   { href: "/order-routing", label: "Order Routing" },
   { href: "/reputation", label: "Reputation" },
