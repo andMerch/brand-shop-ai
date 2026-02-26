@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { CatalogSyncSchema } from "@app/shared";
+import { MockupPlacement } from "@prisma/client";
 import { prisma } from "../lib/db.js";
 import { syncSsActivewearCatalog } from "../services/catalogs/ssactivewear.js";
 import { syncPrintfulCatalog } from "../services/catalogs/printful.js";
@@ -22,7 +23,8 @@ async function autoGenerateMockups(params: {
   const logoUrl = (mockups.logoUrl as string | undefined) ?? (brand.logoUrl as string | undefined);
   if (!logoUrl) return;
 
-  const placements = (mockups.autoPlacements as string[] | undefined) ?? ["FULL_FRONT"];
+  const placements: MockupPlacement[] =
+    (mockups.autoPlacements as MockupPlacement[] | undefined) ?? [MockupPlacement.FULL_FRONT];
   const decoration = (mockups.decoration as string | undefined) ?? "NONE";
   const autoColors = new Set((mockups.autoColors as string[] | undefined) ?? []);
   const autoSizes = new Set((mockups.autoSizes as string[] | undefined) ?? []);
