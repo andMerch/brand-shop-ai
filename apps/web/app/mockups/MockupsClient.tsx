@@ -128,6 +128,41 @@ export default function MockupsClient() {
     };
   }, [catalog]);
 
+  const isStoreResolved = Boolean(storeId && storeName);
+  const isCatalogLoaded = catalog.length > 0;
+  const isProductSelected = Boolean(productId);
+  const isLogoReady = Boolean(logoUrl || logoFile || layers.some((layer) => layer.logoUrl));
+  const canGenerate = isStoreResolved && isCatalogLoaded && isProductSelected && isLogoReady;
+
+  const steps = [
+    {
+      id: 1,
+      title: "Connect Store",
+      description: "Resolve the storefront domain + store ID.",
+      done: isStoreResolved
+    },
+    {
+      id: 2,
+      title: "Load Catalog",
+      description: "Pick a placement, product, and variant.",
+      done: isCatalogLoaded && isProductSelected
+    },
+    {
+      id: 3,
+      title: "Style Logos",
+      description: "Upload logos, set decoration, and drag placement.",
+      done: isLogoReady
+    },
+    {
+      id: 4,
+      title: "Generate",
+      description: "Create mockups and save auto-generation settings.",
+      done: results.length > 0
+    }
+  ];
+  const completedSteps = steps.filter((step) => step.done).length;
+  const progress = Math.round((completedSteps / steps.length) * 100);
+
   const formatError = (payload: any, fallback: string) => {
     if (!payload) return fallback;
     if (typeof payload === "string" && payload.trim()) return payload;
@@ -383,103 +418,365 @@ export default function MockupsClient() {
   };
 
   return (
-    <div className="stack">
-      <section className="card">
-        <h2>Mockup Studio</h2>
-        <p>
-          Upload a logo, pick a product, and generate mockups by placement. These
-          mockups feed the storefront catalog images.
-        </p>
-        <div className="stack">
-          <div>
-            <label>
-              Storefront domain
-              <input
-                className="input light"
-                placeholder="brand-shop-ai-store.brand-shop.ai"
-                value={host}
-                onChange={(event) => setHost(event.target.value)}
-              />
-            </label>
+    <div className="container mockups-shell">
+      <section className="mockups-hero">
+        <div>
+          <div className="mockups-kicker">AI Mockup Studio</div>
+          <h1>Mockup Studio</h1>
+          <p>
+            Build product-ready mockups fast: drag placements, choose embroidery or DTG,
+            and auto-generate catalog images.
+          </p>
+          <div className="mockups-badges">
+            <span className="tag">Embroidery + DTG</span>
+            <span className="tag">Hat + Apparel Placements</span>
+            <span className="tag">Auto-Generate on Sync</span>
           </div>
-          <div className="row">
-            <div style={{ flex: 1 }}>
-              <label>
-                Store ID
-                <input
-                  className="input light"
-                  placeholder="Store ID"
-                  value={storeId}
-                  onChange={(event) => setStoreId(event.target.value)}
-                />
-              </label>
-            </div>
-            <button className="ghost" type="button" onClick={resolveStore}>
-              Resolve Store
-            </button>
+        </div>
+        <div className="mockups-progress">
+          <div className="progress-label">Launch Readiness</div>
+          <div className="progress-bar">
+            <span style={{ width: `${progress}%` }} />
           </div>
-          {storeName && (
-            <div className="notice success">Resolved store: {storeName}</div>
-          )}
+          <div className="progress-meta">
+            {completedSteps}/{steps.length} steps complete
+          </div>
+          <button className="cta" type="button" onClick={generateMockups} disabled={!canGenerate}>
+            {canGenerate ? "Generate Mockups" : "Complete steps to generate"}
+          </button>
         </div>
       </section>
 
-      <section className="card">
-        <h3>Catalog + Placement</h3>
-        <div className="row">
-          <label style={{ flex: 1 }}>
-            Placement
-            <select
-              className="select"
-              value={placement}
-              onChange={(event) => setPlacement(event.target.value as keyof typeof placementPresets)}
-            >
-              {placements.map((item) => (
-                <option key={item} value={item}>
-                  {item.replace("_", " ")}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="ghost" type="button" onClick={loadCatalog}>
-            Load Catalog
-          </button>
+      <div className="mockups-grid">
+        <div className="mockups-main">
+          <section className="step-card">
+            <div className="step-header">
+              <span className={`step-indicator ${isStoreResolved ? "done" : ""}`}>1</span>
+              <div>
+                <h3>Connect Store</h3>
+                <p>Resolve the storefront domain to lock in catalog + pricing.</p>
+              </div>
+            </div>
+            <div className="step-body stack">
+              <label>
+                Storefront domain
+                <input
+                  className="input light"
+                  value={host}
+                  onChange={(event) => setHost(event.target.value)}
+                  placeholder="brand-shop-ai-store.brand-shop.ai"
+                />
+              </label>
+              <label>
+                Store ID
+                <div className="row">
+                  <input
+                    className="input light"
+                    value={storeId}
+                    onChange={(event) => setStoreId(event.target.value)}
+                    placeholder="Store ID"
+                  />
+                  <button
+                    className="ghost"
+                    type="button"
+                    onClick={resolveStore}
+                    disabled={!storeId}
+                  >
+                    Resolve Store
+                  </button>
+                </div>
+              </label>
+              {storeName && <div className="status-pill success">Resolved: {storeName}</div>}
+            </div>
+          </section>
+
+          <section className="step-card">
+            <div className="step-header">
+              <span className={`step-indicator ${isCatalogLoaded ? "done" : ""}`}>2</span>
+              <div>
+                <h3>Load Catalog + Placement</h3>
+                <p>Select the base product and placement to generate mockups.</p>
+              </div>
+            </div>
+            <div className="step-body stack">
+              <label>
+                Placement
+                <div className="row">
+                  <select
+                    className="select"
+                    value={placement}
+                    onChange={(event) =>
+                      setPlacement(event.target.value as keyof typeof placementPresets)
+                    }
+                  >
+                    {placements.map((item) => (
+                      <option key={item} value={item}>
+                        {item.replace("_", " ")}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="ghost"
+                    type="button"
+                    onClick={loadCatalog}
+                    disabled={!storeId}
+                  >
+                    Load Catalog
+                  </button>
+                </div>
+              </label>
+              {catalog.length > 0 && (
+                <div className="stack">
+                  <label>
+                    Product
+                    <select
+                      className="select"
+                      value={productId}
+                      onChange={(event) => {
+                        setProductId(event.target.value);
+                        setVariantId("");
+                      }}
+                    >
+                      {catalog.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Variant (optional)
+                    <select
+                      className="select"
+                      value={variantId}
+                      onChange={(event) => setVariantId(event.target.value)}
+                    >
+                      <option value="">All variants</option>
+                      {variants.map((variant) => (
+                        <option key={variant.id} value={variant.id}>
+                          {variant.size || "One Size"} · {variant.color || "Color"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="step-card">
+            <div className="step-header">
+              <span className={`step-indicator ${isLogoReady ? "done" : ""}`}>3</span>
+              <div>
+                <h3>Logo Layers</h3>
+                <p>Upload logos, set decoration, and drag placement to fine-tune.</p>
+              </div>
+            </div>
+            <div className="step-body stack">
+              <label>
+                Primary logo URL (optional override)
+                <input
+                  className="input light"
+                  placeholder="https://..."
+                  value={logoUrl}
+                  onChange={(event) => setLogoUrl(event.target.value)}
+                />
+              </label>
+              <div className="row">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)}
+                />
+                <button className="ghost" type="button" onClick={uploadLogo}>
+                  Upload Logo
+                </button>
+              </div>
+              <div className="layer-grid">
+                {layers.map((layer, index) => (
+                  <div key={layer.id} className="layer-card">
+                    <div className="row">
+                      <strong>Layer {index + 1}</strong>
+                      {layers.length > 1 && (
+                        <button className="ghost" type="button" onClick={() => removeLayer(layer.id)}>
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <label>
+                      Placement
+                      <select
+                        className="select"
+                        value={layer.placement}
+                        onChange={(event) =>
+                          snapLayer(layer.id, event.target.value as keyof typeof placementPresets)
+                        }
+                      >
+                        {placements.map((item) => (
+                          <option key={item} value={item}>
+                            {item.replace("_", " ")}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Decoration
+                      <select
+                        className="select"
+                        value={layer.decoration}
+                        onChange={(event) =>
+                          updateLayer(layer.id, { decoration: event.target.value as DecorationType })
+                        }
+                      >
+                        <option value="PUFF">Embroidery (Puff)</option>
+                        <option value="DTG">DTG</option>
+                        <option value="NONE">None</option>
+                      </select>
+                    </label>
+                    <label>
+                      Size
+                      <input
+                        className="input light"
+                        type="range"
+                        min={0.1}
+                        max={0.8}
+                        step={0.01}
+                        value={layer.widthRatio}
+                        onChange={(event) =>
+                          updateLayer(layer.id, { widthRatio: Number(event.target.value) })
+                        }
+                      />
+                    </label>
+                    <div className="row">
+                      <label style={{ flex: 1 }}>
+                        Logo URL override
+                        <input
+                          className="input light"
+                          value={layer.logoUrl ?? ""}
+                          placeholder="https://..."
+                          onChange={(event) =>
+                            updateLayer(layer.id, { logoUrl: event.target.value })
+                          }
+                        />
+                      </label>
+                      <button
+                        className="ghost"
+                        type="button"
+                        onClick={() => snapLayer(layer.id, layer.placement)}
+                      >
+                        Snap
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button className="ghost" type="button" onClick={addLayer}>
+                  Add Logo Layer
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="step-card">
+            <div className="step-header">
+              <span className={`step-indicator ${results.length > 0 ? "done" : ""}`}>4</span>
+              <div>
+                <h3>Generate Mockups</h3>
+                <p>Build storefront-ready images and save settings automatically.</p>
+              </div>
+            </div>
+            <div className="step-body stack">
+              <label className="row" style={{ justifyContent: "flex-start" }}>
+                <input
+                  type="checkbox"
+                  checked={overwrite}
+                  onChange={(event) => setOverwrite(event.target.checked)}
+                />
+                Overwrite existing mockups
+              </label>
+              <button className="cta" type="button" onClick={generateMockups} disabled={!canGenerate}>
+                Generate Mockups
+              </button>
+            </div>
+          </section>
+
+          <details className="step-card">
+            <summary className="summary-title">Auto-Generate Settings</summary>
+            <div className="step-body stack">
+              <p>Automatically create mockups for selected colors/sizes when the catalog syncs.</p>
+              <label className="row" style={{ justifyContent: "flex-start" }}>
+                <input
+                  type="checkbox"
+                  checked={autoGenerate}
+                  onChange={(event) => setAutoGenerate(event.target.checked)}
+                />
+                Enable auto-generation on catalog sync
+              </label>
+              <div className="stack" style={{ marginTop: "0.8rem" }}>
+                <div>
+                  <strong>Colors</strong>
+                  <div className="card-grid">
+                    {palette.colors.map((color) => (
+                      <label
+                        key={color}
+                        className="tag"
+                        style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={autoColors.includes(color)}
+                          onChange={(event) => {
+                            setAutoColors((prev) =>
+                              event.target.checked
+                                ? [...prev, color]
+                                : prev.filter((item) => item !== color)
+                            );
+                          }}
+                        />
+                        {color}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <strong>Sizes</strong>
+                  <div className="card-grid">
+                    {palette.sizes.map((size) => (
+                      <label
+                        key={size}
+                        className="tag"
+                        style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={autoSizes.includes(size)}
+                          onChange={(event) => {
+                            setAutoSizes((prev) =>
+                              event.target.checked
+                                ? [...prev, size]
+                                : prev.filter((item) => item !== size)
+                            );
+                          }}
+                        />
+                        {size}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
-        {catalog.length > 0 && (
-          <div className="stack">
-            <label>
-              Product
-              <select
-                className="select"
-                value={productId}
-                onChange={(event) => {
-                  setProductId(event.target.value);
-                  setVariantId("");
-                }}
-              >
-                {catalog.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Variant (optional)
-              <select
-                className="select"
-                value={variantId}
-                onChange={(event) => setVariantId(event.target.value)}
-              >
-                <option value="">All variants</option>
-                {variants.map((variant) => (
-                  <option key={variant.id} value={variant.id}>
-                    {variant.size || "One Size"} · {variant.color || "Color"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {previewImage && (
+
+        <aside className="mockups-side">
+          <div className="preview-card">
+            <div className="preview-header">
+              <div>
+                <strong>Live Preview</strong>
+                <p className="muted">Drag logos directly on the product image.</p>
+              </div>
+              {selectedProduct && <span className="tag">{selectedProduct.name}</span>}
+            </div>
+            {previewImage ? (
               <div
                 className="image-frame"
                 ref={previewRef}
@@ -492,210 +789,59 @@ export default function MockupsClient() {
                   return (
                     <div
                       key={layer.id}
+                      className="drag-logo"
                       style={{
-                        position: "absolute",
                         left: `${layer.x * 100}%`,
                         top: `${layer.y * 100}%`,
-                        width: `${layer.widthRatio * 100}%`,
-                        transform: "translate(-50%, -50%)",
-                        cursor: "grab"
+                        width: `${layer.widthRatio * 100}%`
                       }}
                       onPointerDown={(event) => startDrag(layer.id, event)}
                     >
-                      <img
-                        src={src}
-                        alt="Logo preview"
-                        style={{ width: "100%", height: "auto", display: "block" }}
-                      />
+                      <img src={src} alt="Logo preview" />
                     </div>
                   );
                 })}
               </div>
+            ) : (
+              <div className="preview-empty">
+                <strong>No preview yet</strong>
+                <p>Select a product + variant to load the preview image.</p>
+              </div>
             )}
           </div>
-        )}
-      </section>
 
-      <section className="card">
-        <h3>Logo + Generate</h3>
-        <div className="stack">
-          <label>
-            Current logo URL (optional override)
-            <input
-              className="input light"
-              placeholder="https://..."
-              value={logoUrl}
-              onChange={(event) => setLogoUrl(event.target.value)}
-            />
-          </label>
-          <div className="row">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)}
-            />
-            <button className="ghost" type="button" onClick={uploadLogo}>
-              Upload Logo
-            </button>
-          </div>
-          <label className="row" style={{ justifyContent: "flex-start" }}>
-            <input
-              type="checkbox"
-              checked={overwrite}
-              onChange={(event) => setOverwrite(event.target.checked)}
-            />
-            Overwrite existing mockups
-          </label>
-          <button className="cta" type="button" onClick={generateMockups}>
-            Generate Mockups
-          </button>
-        </div>
-      </section>
-
-      <section className="card">
-        <h3>Logo Layers</h3>
-        <div className="stack">
-          {layers.map((layer, index) => (
-            <div key={layer.id} className="stack" style={{ padding: "0.75rem", border: "1px solid var(--line)", borderRadius: 12 }}>
-              <div className="row">
-                <strong>Layer {index + 1}</strong>
-                {layers.length > 1 && (
-                  <button className="ghost" type="button" onClick={() => removeLayer(layer.id)}>
-                    Remove
-                  </button>
-                )}
+          <div className="step-list">
+            {steps.map((step) => (
+              <div key={step.id} className={`step-list-item ${step.done ? "done" : ""}`}>
+                <div className="step-bullet">{step.id}</div>
+                <div>
+                  <strong>{step.title}</strong>
+                  <p>{step.description}</p>
+                </div>
               </div>
-              <label>
-                Placement
-                <select
-                  className="select"
-                  value={layer.placement}
-                  onChange={(event) =>
-                    snapLayer(layer.id, event.target.value as keyof typeof placementPresets)
-                  }
-                >
-                  {placements.map((item) => (
-                    <option key={item} value={item}>
-                      {item.replace("_", " ")}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Decoration
-                <select
-                  className="select"
-                  value={layer.decoration}
-                  onChange={(event) =>
-                    updateLayer(layer.id, { decoration: event.target.value as DecorationType })
-                  }
-                >
-                  <option value="PUFF">Embroidery (Puff)</option>
-                  <option value="DTG">DTG</option>
-                  <option value="NONE">None</option>
-                </select>
-              </label>
-              <label>
-                Size
-                <input
-                  className="input light"
-                  type="range"
-                  min={0.1}
-                  max={0.8}
-                  step={0.01}
-                  value={layer.widthRatio}
-                  onChange={(event) =>
-                    updateLayer(layer.id, { widthRatio: Number(event.target.value) })
-                  }
-                />
-              </label>
-              <div className="row">
-                <label style={{ flex: 1 }}>
-                  Logo URL override (optional)
-                  <input
-                    className="input light"
-                    value={layer.logoUrl ?? ""}
-                    placeholder="https://..."
-                    onChange={(event) =>
-                      updateLayer(layer.id, { logoUrl: event.target.value })
-                    }
-                  />
-                </label>
-                <button
-                  className="ghost"
-                  type="button"
-                  onClick={() => snapLayer(layer.id, layer.placement)}
-                >
-                  Snap to placement
-                </button>
-              </div>
-            </div>
-          ))}
-          <button className="ghost" type="button" onClick={addLayer}>
-            Add Logo Layer
-          </button>
-        </div>
-      </section>
+            ))}
+          </div>
 
-      <section className="card">
-        <h3>Auto-Generate Settings</h3>
-        <p>Automatically create mockups for selected colors/sizes when the catalog syncs.</p>
-        <label className="row" style={{ justifyContent: "flex-start" }}>
-          <input
-            type="checkbox"
-            checked={autoGenerate}
-            onChange={(event) => setAutoGenerate(event.target.checked)}
-          />
-          Enable auto-generation on catalog sync
-        </label>
-        <div className="stack" style={{ marginTop: "0.8rem" }}>
-          <div>
-            <strong>Colors</strong>
-            <div className="card-grid">
-              {palette.colors.map((color) => (
-                <label key={color} className="tag" style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={autoColors.includes(color)}
-                    onChange={(event) => {
-                      setAutoColors((prev) =>
-                        event.target.checked
-                          ? [...prev, color]
-                          : prev.filter((item) => item !== color)
-                      );
-                    }}
-                  />
-                  {color}
-                </label>
-              ))}
+          <div className="ai-card">
+            <div className="row">
+              <strong>AI Assist</strong>
+              <span className="tag">Smart Tips</span>
+            </div>
+            <p>
+              Use puff embroidery for hats, DTG for large front prints, and enable auto-generation
+              once your brand logo is finalized.
+            </p>
+            <div className="mockups-badges">
+              <span className="tag">Puff Embroidery</span>
+              <span className="tag">DTG</span>
+              <span className="tag">Auto Sync</span>
             </div>
           </div>
-          <div>
-            <strong>Sizes</strong>
-            <div className="card-grid">
-              {palette.sizes.map((size) => (
-                <label key={size} className="tag" style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={autoSizes.includes(size)}
-                    onChange={(event) => {
-                      setAutoSizes((prev) =>
-                        event.target.checked
-                          ? [...prev, size]
-                          : prev.filter((item) => item !== size)
-                      );
-                    }}
-                  />
-                  {size}
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+        </aside>
+      </div>
 
       {(status || error) && (
-        <div className={`notice ${error ? "error" : "success"}`}>
+        <div className={`notice ${error ? "error" : "success"} mockups-notice`}>
           {error ?? status}
         </div>
       )}

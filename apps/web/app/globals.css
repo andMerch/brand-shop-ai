@@ -223,6 +223,253 @@ a {
   object-fit: contain;
 }
 
+.mockups-shell {
+  display: grid;
+  gap: 1.8rem;
+}
+
+.mockups-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+  padding: 2rem;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(28, 61, 90, 0.95));
+  color: #ffffff;
+  box-shadow: 0 25px 45px rgba(15, 23, 42, 0.18);
+}
+
+.mockups-hero h1 {
+  color: #ffffff;
+}
+
+.mockups-hero p {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.mockups-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 0.4rem;
+}
+
+.mockups-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.mockups-progress {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  padding: 1.4rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.progress-label {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.progress-bar {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ff6a2b, #fbbf24);
+  border-radius: inherit;
+}
+
+.progress-meta {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.mockups-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 1.8rem;
+}
+
+.mockups-main {
+  display: grid;
+  gap: 1.4rem;
+}
+
+.mockups-side {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.step-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1.4rem;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+}
+
+.step-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.step-indicator {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(255, 106, 43, 0.15);
+  color: var(--brand);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.step-indicator.done {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.step-body {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-pill.success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.layer-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.layer-card {
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px dashed rgba(15, 23, 42, 0.15);
+  background: rgba(15, 23, 42, 0.02);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.summary-title {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.preview-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1.2rem;
+  display: grid;
+  gap: 1rem;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.preview-empty {
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px dashed var(--line);
+  text-align: center;
+  color: var(--muted);
+}
+
+.drag-logo {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+}
+
+.drag-logo img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.step-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.step-list-item {
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.9rem;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.step-list-item.done {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.step-bullet {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.ai-card {
+  background: linear-gradient(135deg, rgba(255, 106, 43, 0.12), rgba(17, 24, 39, 0.08));
+  border-radius: 18px;
+  padding: 1.2rem;
+  display: grid;
+  gap: 0.7rem;
+  border: 1px solid rgba(255, 106, 43, 0.18);
+}
+
+.mockups-notice {
+  color: var(--ink);
+  background: var(--panel);
+  border-color: var(--line);
+}
+
+@media (max-width: 960px) {
+  .mockups-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .badge {
   display: inline-flex;
   padding: 0.3rem 0.6rem;
