@@ -102,6 +102,11 @@ enum MockupPlacement {
   FULL_FRONT
   FULL_BACK
   BACK
+  HAT_FRONT
+  HAT_LEFT
+  HAT_RIGHT
+  HAT_BACK
+  HAT_SIDE
 }
 
 model Tenant {

@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { MockupPlacement } from "@prisma/client";
 import { prisma } from "../lib/db.js";
 import { storeFile } from "../lib/storage.js";
 
@@ -6,14 +7,14 @@ export type DecorationType = "PUFF" | "DTG" | "NONE";
 
 export type MockupLayerInput = {
   logoUrl?: string;
-  placement: string;
+  placement: MockupPlacement;
   x?: number;
   y?: number;
   widthRatio?: number;
   decoration?: DecorationType;
 };
 
-const placementPresets: Record<string, { x: number; y: number; widthRatio: number }> = {
+const placementPresets: Record<MockupPlacement, { x: number; y: number; widthRatio: number }> = {
   LEFT_CHEST: { x: 0.32, y: 0.33, widthRatio: 0.18 },
   RIGHT_CHEST: { x: 0.68, y: 0.33, widthRatio: 0.18 },
   FULL_FRONT: { x: 0.5, y: 0.45, widthRatio: 0.55 },
@@ -152,16 +153,16 @@ export async function generateMockupsForProduct(params: {
     ? product.variants.filter((variant) => variantIds.includes(variant.id))
     : product.variants;
 
-  const results: Array<{ variantId: string | null; imageUrl: string; placement: string }> = [];
+  const results: Array<{ variantId: string | null; imageUrl: string; placement: MockupPlacement }> = [];
   const variantsToProcess = targetVariants.length ? targetVariants : [null];
 
   const grouped = layers.reduce((acc, layer) => {
     const placement = layer.placement ?? "FULL_FRONT";
-    const list = acc.get(placement) ?? [];
+    const list = acc.get(placement as MockupPlacement) ?? [];
     list.push(layer);
-    acc.set(placement, list);
+    acc.set(placement as MockupPlacement, list);
     return acc;
-  }, new Map<string, MockupLayerInput[]>());
+  }, new Map<MockupPlacement, MockupLayerInput[]>());
 
   for (const variant of variantsToProcess) {
     const baseImageUrl = variant?.imageUrl ?? product.imageUrl;

@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { prisma } from "../lib/db.js";
 import { MockupGenerateSchema, MockupSettingsSchema } from "@app/shared";
 import { storeFile } from "../lib/storage.js";
+import { MockupPlacement } from "@prisma/client";
 import { generateMockupsForProduct, MockupLayerInput } from "../services/mockups.js";
 
 export async function mockupRoutes(app: FastifyInstance) {
@@ -74,6 +75,7 @@ export async function mockupRoutes(app: FastifyInstance) {
 
     const normalizedLayers: MockupLayerInput[] = (layers ?? []).map((layer) => ({
       ...layer,
+      placement: layer.placement as MockupPlacement,
       logoUrl: layer.logoUrl ?? resolvedLogoUrl,
       decoration: (layer.decoration as any) ?? decoration ?? "NONE"
     }));
@@ -84,7 +86,7 @@ export async function mockupRoutes(app: FastifyInstance) {
       }
       normalizedLayers.push({
         logoUrl: resolvedLogoUrl,
-        placement,
+        placement: placement as MockupPlacement,
         decoration: decoration ?? "NONE"
       });
     }
