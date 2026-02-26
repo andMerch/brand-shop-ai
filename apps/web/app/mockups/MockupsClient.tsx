@@ -53,6 +53,15 @@ export default function MockupsClient() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<MockupResult[]>([]);
 
+  const formatError = (payload: any, fallback: string) => {
+    if (!payload) return fallback;
+    if (typeof payload === "string" && payload.trim()) return payload;
+    if (typeof payload.error === "string" && payload.error.trim()) return payload.error;
+    if (typeof payload.message === "string" && payload.message.trim()) return payload.message;
+    if (payload.error) return JSON.stringify(payload.error);
+    return fallback;
+  };
+
   const selectedProduct = useMemo(
     () => catalog.find((product) => product.id === productId) ?? null,
     [catalog, productId]
@@ -80,7 +89,7 @@ export default function MockupsClient() {
     );
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
-      setError(payload.error ?? "Unable to resolve storefront domain.");
+      setError(formatError(payload, "Unable to resolve storefront domain."));
       return;
     }
     setStoreId(payload.store?.id ?? "");
@@ -103,7 +112,7 @@ export default function MockupsClient() {
     );
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
-      setError(payload.error ?? "Unable to load catalog.");
+      setError(formatError(payload, "Unable to load catalog."));
       return;
     }
     const items = (payload.items ?? []) as CatalogProduct[];
@@ -137,11 +146,38 @@ export default function MockupsClient() {
     );
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
-      setError(payload.error ?? "Unable to upload logo.");
+      setError(formatError(payload, "Unable to upload logo."));
       return;
     }
     setLogoUrl(payload.logoUrl ?? "");
     setStatus("Logo uploaded and saved to store.");
+  };
+
+  const ensureLogoUrl = async () => {
+    if (logoUrl.trim()) return logoUrl.trim();
+    if (!logoFile) return "";
+    try {
+      const form = new FormData();
+      form.append("file", logoFile);
+      const response = await fetch(
+        `${apiBase}/api/storefront/logo?storeId=${encodeURIComponent(storeId)}`,
+        {
+          method: "POST",
+          body: form
+        }
+      );
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        setError(formatError(payload, "Unable to upload logo."));
+        return "";
+      }
+      setLogoUrl(payload.logoUrl ?? "");
+      setStatus("Logo uploaded and saved to store.");
+      return payload.logoUrl ?? "";
+    } catch (err) {
+      setError("Unable to upload logo.");
+      return "";
+    }
   };
 
   const generateMockups = async () => {
@@ -155,6 +191,11 @@ export default function MockupsClient() {
       setError("Select a product.");
       return;
     }
+    const resolvedLogoUrl = await ensureLogoUrl();
+    if (!resolvedLogoUrl) {
+      setError("Upload a logo or provide a logo URL before generating mockups.");
+      return;
+    }
     const response = await fetch(`${apiBase}/api/storefront/mockups/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -163,13 +204,13 @@ export default function MockupsClient() {
         productId,
         variantId: variantId || undefined,
         placement,
-        logoUrl: logoUrl || undefined,
+        logoUrl: resolvedLogoUrl || undefined,
         overwrite
       })
     });
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
-      setError(payload.error ?? "Mockup generation failed.");
+      setError(formatError(payload, "Mockup generation failed."));
       return;
     }
     setResults(payload.results ?? []);
