@@ -213,8 +213,15 @@ export default function MockupsClient() {
       setError(formatError(payload, "Mockup generation failed."));
       return;
     }
-    setResults(payload.results ?? []);
-    setStatus("Mockups generated.");
+    const nextResults = payload.results ?? [];
+    if (!nextResults.length) {
+      setError(
+        "No base product images were found for this selection. Try another product or variant, or re-sync the catalog with images."
+      );
+      return;
+    }
+    setResults(nextResults);
+    setStatus(`Mockups generated: ${nextResults.length}.`);
   };
 
   return (
