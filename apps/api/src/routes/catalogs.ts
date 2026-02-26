@@ -22,8 +22,8 @@ async function autoGenerateMockups(params: {
   const logoUrl = (mockups.logoUrl as string | undefined) ?? (brand.logoUrl as string | undefined);
   if (!logoUrl) return;
 
-  const placements = (mockups.autoPlacements as string[] | undefined) ?? [\"FULL_FRONT\"];
-  const decoration = (mockups.decoration as string | undefined) ?? \"NONE\";
+  const placements = (mockups.autoPlacements as string[] | undefined) ?? ["FULL_FRONT"];
+  const decoration = (mockups.decoration as string | undefined) ?? "NONE";
   const autoColors = new Set((mockups.autoColors as string[] | undefined) ?? []);
   const autoSizes = new Set((mockups.autoSizes as string[] | undefined) ?? []);
 
