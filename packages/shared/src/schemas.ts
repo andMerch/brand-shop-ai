@@ -127,8 +127,24 @@ export const MockupPlacementSchema = z.enum([
   "RIGHT_CHEST",
   "FULL_FRONT",
   "FULL_BACK",
-  "BACK"
+  "BACK",
+  "HAT_FRONT",
+  "HAT_LEFT",
+  "HAT_RIGHT",
+  "HAT_BACK",
+  "HAT_SIDE"
 ]);
+
+export const MockupDecorationSchema = z.enum(["PUFF", "DTG", "NONE"]).default("NONE");
+
+export const MockupLayerSchema = z.object({
+  logoUrl: z.string().url().optional(),
+  placement: MockupPlacementSchema,
+  x: z.number().min(0).max(1).optional(),
+  y: z.number().min(0).max(1).optional(),
+  widthRatio: z.number().min(0.05).max(0.9).optional(),
+  decoration: MockupDecorationSchema.optional()
+});
 
 export const MockupGenerateSchema = z.object({
   storeId: z.string().min(1),
@@ -136,7 +152,19 @@ export const MockupGenerateSchema = z.object({
   variantId: z.string().optional(),
   placement: MockupPlacementSchema.default("FULL_FRONT"),
   logoUrl: z.string().url().optional(),
+  decoration: MockupDecorationSchema.optional(),
+  layers: z.array(MockupLayerSchema).optional(),
   overwrite: z.boolean().optional()
+});
+
+export const MockupSettingsSchema = z.object({
+  storeId: z.string().min(1),
+  autoGenerate: z.boolean().optional(),
+  autoPlacements: z.array(MockupPlacementSchema).optional(),
+  autoColors: z.array(z.string()).optional(),
+  autoSizes: z.array(z.string()).optional(),
+  decoration: MockupDecorationSchema.optional(),
+  logoUrl: z.string().url().optional()
 });
 
 export const SupplierAccountSchema = z.object({
@@ -177,6 +205,7 @@ export type PricingRuleInput = z.infer<typeof PricingRuleSchema>;
 export type PricingRuleBatchInput = z.infer<typeof PricingRuleBatchSchema>;
 export type PricingConfigUpsertInput = z.infer<typeof PricingConfigUpsertSchema>;
 export type MockupGenerateInput = z.infer<typeof MockupGenerateSchema>;
+export type MockupSettingsInput = z.infer<typeof MockupSettingsSchema>;
 export type SupplierAccountInput = z.infer<typeof SupplierAccountSchema>;
 export type CatalogSyncInput = z.infer<typeof CatalogSyncSchema>;
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;
