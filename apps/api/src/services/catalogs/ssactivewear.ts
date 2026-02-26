@@ -24,6 +24,13 @@ type SsProduct = {
   imageURL?: string;
   imageUrl?: string;
   mainImage?: string;
+  colorFrontImage?: string;
+  colorSideImage?: string;
+  colorBackImage?: string;
+  colorOnModelFrontImage?: string;
+  colorOnModelSideImage?: string;
+  colorOnModelBackImage?: string;
+  colorSwatchImage?: string;
   casePrice?: number;
   customerPrice?: number;
   piecePrice?: number;
@@ -34,6 +41,8 @@ type SsAccount = {
   apiKey: string;
   baseUrl?: string;
 };
+
+const ssImageBase = "https://www.ssactivewear.com/";
 
 function resolveProductName(item: SsProduct) {
   return item.title || item.name || item.styleName || "SSActivewear Product";
@@ -47,8 +56,27 @@ function resolveStyleKey(item: SsProduct) {
   return item.styleID || item.styleId || item.productId;
 }
 
+function normalizeImageUrl(value?: string) {
+  if (!value) return undefined;
+  if (value.startsWith("http")) return value;
+  const trimmed = value.startsWith("/") ? value.slice(1) : value;
+  return `${ssImageBase}${trimmed}`;
+}
+
 function resolveVariantImage(item: SsProduct) {
-  return item.image || item.imageURL || item.imageUrl || item.mainImage;
+  const candidate =
+    item.image ||
+    item.imageURL ||
+    item.imageUrl ||
+    item.mainImage ||
+    item.colorFrontImage ||
+    item.colorOnModelFrontImage ||
+    item.colorSideImage ||
+    item.colorBackImage ||
+    item.colorOnModelSideImage ||
+    item.colorOnModelBackImage ||
+    item.colorSwatchImage;
+  return normalizeImageUrl(candidate);
 }
 
 function resolveCategory(item: SsProduct) {
